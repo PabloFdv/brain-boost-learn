@@ -162,3 +162,28 @@
 .lesson-content .analogy-box {
   @apply bg-accent/10 border border-accent/30 rounded-xl p-4 my-4;
 }
+
+/* KaTeX dark mode support */
+.dark .katex {
+  color: hsl(210 40% 98%);
+}
+.dark .katex .mord,
+.dark .katex .mbin,
+.dark .katex .mrel,
+.dark .katex .mopen,
+.dark .katex .mclose,
+.dark .katex .mpunct,
+.dark .katex .minner {
+  color: hsl(210 40% 98%);
+}
+
+/* Better math block spacing */
+.lesson-content .katex-display {
+  @apply my-6 overflow-x-auto py-2;
+}
+.lesson-content .katex-display > .katex {
+  @apply text-lg;
+}
+.lesson-content .katex {
+  font-size: 1.05em;
+}

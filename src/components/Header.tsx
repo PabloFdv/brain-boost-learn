@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, Home } from "lucide-react";
 import { motion } from "framer-motion";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Header = () => {
   const location = useLocation();
@@ -22,7 +23,7 @@ const Header = () => {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-3">
           {!isHome && (
             <Link
               to="/"
@@ -32,9 +33,10 @@ const Header = () => {
               Início
             </Link>
           )}
-          <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full">
+          <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full hidden sm:inline">
             Baseado na BNCC
           </span>
+          <ThemeToggle />
         </nav>
       </div>
     </motion.header>
