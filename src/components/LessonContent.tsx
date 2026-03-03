@@ -8,14 +8,28 @@ interface LessonContentProps {
 }
 
 const LessonContent = ({ content }: LessonContentProps) => {
-  // Clean up math formatting - remove stray $ signs and fix common issues
+  // Robust math formatting cleanup
   const cleanContent = content
-    // Fix inline math: ensure $...$ is proper
-    .replace(/\$\$/g, "$$$$") // normalize double dollars
-    .replace(/\\\[/g, "$$") // convert \[ to $$
-    .replace(/\\\]/g, "$$") // convert \] to $$
-    .replace(/\\\(/g, "$") // convert \( to $
-    .replace(/\\\)/g, "$"); // convert \) to $
+    // Convert LaTeX display math delimiters to $$ ... $$
+    .replace(/\\\[/g, "\n$$\n")
+    .replace(/\\\]/g, "\n$$\n")
+    // Convert LaTeX inline math delimiters to $ ... $
+    .replace(/\\\(/g, "$")
+    .replace(/\\\)/g, "$")
+    // Fix doubled dollars that aren't display math (e.g. $$text$$ on same line without newlines)
+    // Don't touch actual display math blocks
+    // Remove stray # inside math contexts
+    .replace(/\$([^$]*?)#([^$]*?)\$/g, "$$$1$2$$")
+    // Remove stray single $ that aren't part of math (orphan dollars)
+    .replace(/([^$\\])\$([^$\n])/g, (match, before, after) => {
+      // If it looks like actual math content, keep it
+      if (/[a-zA-Z0-9=+\-*/^{}()\\]/.test(after)) return match;
+      return `${before}${after}`;
+    })
+    // Ensure display math blocks have newlines around them
+    .replace(/([^\n])\$\$([^\n])/g, "$1\n$$\n$2")
+    // Clean up multiple consecutive newlines
+    .replace(/\n{3,}/g, "\n\n");
 
   return (
     <div className="lesson-content">
@@ -23,7 +37,6 @@ const LessonContent = ({ content }: LessonContentProps) => {
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          // Custom rendering for better styling
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold mt-8 mb-4 text-foreground font-display">
               {children}

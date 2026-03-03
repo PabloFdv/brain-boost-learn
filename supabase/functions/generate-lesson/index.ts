@@ -25,22 +25,32 @@ REGRAS OBRIGATÓRIAS para criar a aula:
 5. Inclua exemplos PRÁTICOS e do cotidiano do aluno
 6. Use **negrito** para conceitos-chave
 7. Use > blockquotes para dicas importantes e analogias
-8. Quando houver fórmulas matemáticas, use notação LaTeX com $...$ para inline e $$...$$ para blocos. Exemplos:
-   - Inline: A fórmula é $E = mc^2$
-   - Bloco: $$\\frac{a}{b} = \\frac{c}{d}$$
-   - NUNCA use caracteres como #, $ soltos fora de contexto LaTeX
+8. REGRAS DE MATEMÁTICA E FÓRMULAS (MUITO IMPORTANTE):
+   - Para fórmulas inline, use $...$ (ex: $E = mc^2$)
+   - Para fórmulas em bloco, use $$...$$ em linhas separadas:
+     $$
+     \\frac{a}{b} = \\frac{c}{d}
+     $$
+   - NUNCA use \\[ \\] ou \\( \\) como delimitadores
+   - NUNCA use $ ou # soltos fora de contexto LaTeX
+   - NUNCA coloque texto normal dentro de delimitadores de math
+   - Use \\text{} para texto dentro de fórmulas: $v = \\frac{\\Delta s}{\\Delta t} \\text{ (em m/s)}$
+   - Use \\cdot para multiplicação, não *
+   - Sempre que citar uma fórmula, explique cada variável
 9. Crie tabelas comparativas quando útil
 10. Termine com um resumo tipo "mapa mental" em tópicos
-11. Seja COMPLETO - cubra todo o conteúdo necessário para a série
-12. Use analogias criativas: compare conceitos científicos com coisas do dia a dia (apps, jogos, redes sociais, etc.)
+11. Seja COMPLETO e EXTENSO - cubra ABSOLUTAMENTE todo o conteúdo necessário para a série
+12. Use analogias criativas: compare conceitos com coisas do dia a dia (apps, jogos, redes sociais, etc.)
 13. Mantenha parágrafos curtos e escaneáveis
+14. A aula deve ser LONGA e DETALHADA - pelo menos 2000 palavras
 
 ESTRUTURA DA AULA:
 ## 🎯 Introdução (analogia do dia a dia)
 ## 📖 Conceitos Fundamentais
-## 🔍 Aprofundando (com exemplos)
+## 🔍 Aprofundando (com muitos exemplos resolvidos passo a passo)
 ## 💡 Analogias e Dicas
-## 📝 Resumo Final (tópicos-chave)`;
+## 📊 Resumo Visual (tabelas quando aplicável)
+## 📝 Resumo Final (tópicos-chave para revisão)`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
