@@ -1,12 +1,80 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { motion } from "framer-motion";
+import { BookOpen, GraduationCap, Sparkles, Target } from "lucide-react";
+import GradeCard from "@/components/GradeCard";
+import Header from "@/components/Header";
+import { grades } from "@/data/curriculum";
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
+    <div className="min-h-screen bg-background">
+      <Header />
+
+      {/* Hero */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-primary/5 via-background to-background pb-12 pt-16">
+        <div className="container mx-auto px-4 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary mb-6">
+              <BookOpen className="h-3.5 w-3.5" />
+              Baseado na BNCC
+            </span>
+
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-display tracking-tight text-foreground mb-4">
+              Estude{" "}
+              <span className="bg-gradient-to-r from-primary via-purple-500 to-accent bg-clip-text text-transparent">
+                todas as disciplinas
+              </span>
+              <br />
+              do 6º ano ao Ensino Médio
+            </h1>
+
+            <p className="mx-auto max-w-2xl text-lg text-muted-foreground mb-8">
+              Conteúdo completo e super didático para avaliações, provas e ENEM.
+              Aulas geradas por IA com explicações claras, analogias simples e exercícios interativos.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                <span>14 disciplinas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <span>7 séries completas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <span>Aulas com IA + Exercícios</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Grade Selection */}
+      <section className="container mx-auto px-4 pb-16">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h2 className="text-2xl font-bold font-display text-foreground mb-2">
+            Escolha sua série
+          </h2>
+          <p className="text-muted-foreground mb-6">
+            Selecione o ano escolar para ver todas as disciplinas disponíveis.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {grades.map((grade, index) => (
+              <GradeCard key={grade.id} grade={grade} index={index} />
+            ))}
+          </div>
+        </motion.div>
+      </section>
     </div>
   );
 };
