@@ -1,7 +1,7 @@
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, BookOpen, ClipboardList } from "lucide-react";
+import { Sparkles, BookOpen, ClipboardList, MessageCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import LessonContent from "@/components/LessonContent";
