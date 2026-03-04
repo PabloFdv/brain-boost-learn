@@ -1,7 +1,7 @@
-import { useParams, Navigate } from "react-router-dom";
+import { useParams, Navigate, Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, BookOpen, ClipboardList } from "lucide-react";
+import { Sparkles, BookOpen, ClipboardList, MessageCircle } from "lucide-react";
 import Header from "@/components/Header";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import LessonContent from "@/components/LessonContent";
@@ -188,6 +188,13 @@ const LessonPage = () => {
               <p className="text-sm text-muted-foreground mt-1">
                 {subject.name} — {grade.name}
               </p>
+              <Link
+                to={`/chat?context=${encodeURIComponent(`${decodedTopic} - ${subject.name} - ${grade.name}`)}`}
+                className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-primary hover:underline"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Perguntar ao Professor IA
+              </Link>
             </div>
           </div>
 

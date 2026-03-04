@@ -1,11 +1,18 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Home } from "lucide-react";
+import { BookOpen, Home, MessageCircle, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 
 const Header = () => {
   const location = useLocation();
   const isHome = location.pathname === "/";
+  const { isAuthenticated, role, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <motion.header
@@ -23,20 +30,42 @@ const Header = () => {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-3">
+        <nav className="flex items-center gap-2">
           {!isHome && (
             <Link
               to="/"
               className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <Home className="h-4 w-4" />
-              Início
+              <span className="hidden sm:inline">Início</span>
+            </Link>
+          )}
+          {isAuthenticated && (
+            <Link
+              to="/chat"
+              className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span className="hidden sm:inline">Professor IA</span>
+            </Link>
+          )}
+          {role === "admin" && (
+            <Link
+              to="/admin"
+              className="text-xs font-medium text-primary bg-primary/10 px-2.5 py-1 rounded-full hover:bg-primary/20 transition-colors"
+            >
+              Admin
             </Link>
           )}
           <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-full hidden sm:inline">
-            Baseado na BNCC
+            BNCC
           </span>
           <ThemeToggle />
+          {isAuthenticated && (
+            <Button variant="ghost" size="icon" onClick={handleLogout} title="Sair" className="h-8 w-8">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          )}
         </nav>
       </div>
     </motion.header>

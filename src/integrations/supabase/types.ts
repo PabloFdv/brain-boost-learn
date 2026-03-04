@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_keys: {
+        Row: {
+          blocked: boolean
+          created_at: string
+          created_by: string
+          id: string
+          key: string
+          used: boolean
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          blocked?: boolean
+          created_at?: string
+          created_by?: string
+          id?: string
+          key: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          blocked?: boolean
+          created_at?: string
+          created_by?: string
+          id?: string
+          key?: string
+          used?: boolean
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
