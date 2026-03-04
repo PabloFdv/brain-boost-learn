@@ -188,6 +188,13 @@ const LessonPage = () => {
               <p className="text-sm text-muted-foreground mt-1">
                 {subject.name} — {grade.name}
               </p>
+              <Link
+                to={`/chat?context=${encodeURIComponent(`${decodedTopic} - ${subject.name} - ${grade.name}`)}`}
+                className="inline-flex items-center gap-1.5 mt-2 text-xs font-medium text-primary hover:underline"
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Perguntar ao Professor IA
+              </Link>
             </div>
           </div>
 
