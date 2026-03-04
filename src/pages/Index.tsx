@@ -29,7 +29,7 @@ const Index = () => {
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-display tracking-tight text-foreground mb-4">
               Estude{" "}
-              <span className="bg-gradient-to-r from-primary via-purple-500 to-accent bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                 todas as disciplinas
               </span>
               <br />
