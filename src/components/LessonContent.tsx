@@ -15,37 +15,59 @@ function cleanMathContent(raw: string): string {
   // Convert \( ... \) to $ ... $
   text = text.replace(/\\\(/g, "$").replace(/\\\)/g, "$");
 
-  // Fix unclosed single $ by finding orphan $ and removing them
-  // Strategy: match pairs of $...$ and $$...$$, remove unpaired ones
+  // Process line by line to fix orphan $ and remove plain-text duplicates after math
   const lines = text.split("\n");
   const fixedLines = lines.map((line) => {
-    // Skip display math lines
     if (line.trim() === "$$") return line;
 
-    // Count $ signs that aren't $$ 
     let result = "";
     let i = 0;
     while (i < line.length) {
       if (line[i] === "$" && line[i + 1] === "$") {
-        // Display math delimiter on this line - keep as is
         result += "$$";
         i += 2;
         continue;
       }
       if (line[i] === "$") {
-        // Find closing $
         const closeIdx = line.indexOf("$", i + 1);
         if (closeIdx !== -1 && closeIdx - i > 1) {
-          // Valid math span
           const mathContent = line.substring(i + 1, closeIdx);
-          // Check it looks like math (has LaTeX commands or math operators)
-          if (/[\\^_{}+\-*/=<>]|\\[a-z]|[0-9]/.test(mathContent)) {
-            result += "$" + mathContent + "$";
-            i = closeIdx + 1;
-            continue;
+          result += "$" + mathContent + "$";
+          i = closeIdx + 1;
+          
+          // After closing $, skip plain-text duplicates of the math content
+          // These are characters that immediately follow without proper word separation
+          // and look like math (numbers, operators, single letters, Unicode math symbols)
+          let skipEnd = i;
+          while (skipEnd < line.length) {
+            const ch = line[skipEnd];
+            const code = ch.charCodeAt(0);
+            // Skip: digits, math operators, single latin letters when followed by more math,
+            // Unicode math symbols (Δ, ±, ·, √, etc.), spaces between math chars
+            if (/[0-9a-zA-Z+\-=·±×÷√∆Δ²³⁴⁵⁶⁷⁸⁹⁰ₓₐₑₒₙ\s–—^_{}()*\/,.]/.test(ch) ||
+                (code >= 0x0391 && code <= 0x03C9) || // Greek letters
+                (code >= 0x2070 && code <= 0x209F) || // Superscripts/subscripts
+                (code >= 0x2200 && code <= 0x22FF)) { // Math operators
+              skipEnd++;
+            } else {
+              break;
+            }
           }
+          
+          // Only skip if we found what looks like a math duplicate (not regular text)
+          if (skipEnd > i) {
+            const skipped = line.substring(i, skipEnd).trim();
+            // It's a duplicate if it's relatively short and doesn't contain 3+ consecutive word chars
+            // (which would indicate actual Portuguese/English text)
+            const hasWords = /[a-zA-ZàáâãéêíóôõúçÀ-Ú]{3,}/.test(skipped);
+            if (!hasWords && skipped.length > 0 && skipped.length < 60) {
+              // Skip the duplicate, but keep any trailing punctuation right before next real text
+              i = skipEnd;
+            }
+          }
+          continue;
         }
-        // Orphan $ or doesn't look like math - remove it
+        // Orphan $ - skip it
         i++;
         continue;
       }
@@ -68,6 +90,8 @@ function cleanMathContent(raw: string): string {
 
   return text;
 }
+
+
 
 const LessonContent = ({ content }: LessonContentProps) => {
   const cleanContent = cleanMathContent(content);
