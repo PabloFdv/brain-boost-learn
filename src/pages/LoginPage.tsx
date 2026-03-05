@@ -43,11 +43,13 @@ const LoginPage = () => {
 
       login(data.role, data.name, data.token);
 
+      // Store key for session validation
       if (data.role === "admin") {
         setAdminKey(key.trim());
         toast({ title: `Bem-vindo, ${data.name}! 👑`, description: "Acesso de administrador liberado." });
         navigate("/admin");
       } else {
+        localStorage.setItem("epistemologia_user_key", key.trim());
         toast({ title: "Acesso liberado! 🎉", description: "Bons estudos!" });
         navigate("/");
       }

@@ -7,29 +7,70 @@ interface LessonContentProps {
   content: string;
 }
 
+function cleanMathContent(raw: string): string {
+  let text = raw;
+
+  // Convert \[ ... \] to $$ ... $$
+  text = text.replace(/\\\[/g, "\n$$\n").replace(/\\\]/g, "\n$$\n");
+  // Convert \( ... \) to $ ... $
+  text = text.replace(/\\\(/g, "$").replace(/\\\)/g, "$");
+
+  // Fix unclosed single $ by finding orphan $ and removing them
+  // Strategy: match pairs of $...$ and $$...$$, remove unpaired ones
+  const lines = text.split("\n");
+  const fixedLines = lines.map((line) => {
+    // Skip display math lines
+    if (line.trim() === "$$") return line;
+
+    // Count $ signs that aren't $$ 
+    let result = "";
+    let i = 0;
+    while (i < line.length) {
+      if (line[i] === "$" && line[i + 1] === "$") {
+        // Display math delimiter on this line - keep as is
+        result += "$$";
+        i += 2;
+        continue;
+      }
+      if (line[i] === "$") {
+        // Find closing $
+        const closeIdx = line.indexOf("$", i + 1);
+        if (closeIdx !== -1 && closeIdx - i > 1) {
+          // Valid math span
+          const mathContent = line.substring(i + 1, closeIdx);
+          // Check it looks like math (has LaTeX commands or math operators)
+          if (/[\\^_{}+\-*/=<>]|\\[a-z]|[0-9]/.test(mathContent)) {
+            result += "$" + mathContent + "$";
+            i = closeIdx + 1;
+            continue;
+          }
+        }
+        // Orphan $ or doesn't look like math - remove it
+        i++;
+        continue;
+      }
+      result += line[i];
+      i++;
+    }
+    return result;
+  });
+
+  text = fixedLines.join("\n");
+
+  // Remove # inside math contexts
+  text = text.replace(/\$([^$]*?)#([^$]*?)\$/g, "$$$1$2$$");
+
+  // Ensure display math blocks have newlines
+  text = text.replace(/([^\n])\$\$([^\n])/g, "$1\n$$\n$2");
+
+  // Clean up excessive newlines
+  text = text.replace(/\n{3,}/g, "\n\n");
+
+  return text;
+}
+
 const LessonContent = ({ content }: LessonContentProps) => {
-  // Robust math formatting cleanup
-  const cleanContent = content
-    // Convert LaTeX display math delimiters to $$ ... $$
-    .replace(/\\\[/g, "\n$$\n")
-    .replace(/\\\]/g, "\n$$\n")
-    // Convert LaTeX inline math delimiters to $ ... $
-    .replace(/\\\(/g, "$")
-    .replace(/\\\)/g, "$")
-    // Fix doubled dollars that aren't display math (e.g. $$text$$ on same line without newlines)
-    // Don't touch actual display math blocks
-    // Remove stray # inside math contexts
-    .replace(/\$([^$]*?)#([^$]*?)\$/g, "$$$1$2$$")
-    // Remove stray single $ that aren't part of math (orphan dollars)
-    .replace(/([^$\\])\$([^$\n])/g, (match, before, after) => {
-      // If it looks like actual math content, keep it
-      if (/[a-zA-Z0-9=+\-*/^{}()\\]/.test(after)) return match;
-      return `${before}${after}`;
-    })
-    // Ensure display math blocks have newlines around them
-    .replace(/([^\n])\$\$([^\n])/g, "$1\n$$\n$2")
-    // Clean up multiple consecutive newlines
-    .replace(/\n{3,}/g, "\n\n");
+  const cleanContent = cleanMathContent(content);
 
   return (
     <div className="lesson-content">
