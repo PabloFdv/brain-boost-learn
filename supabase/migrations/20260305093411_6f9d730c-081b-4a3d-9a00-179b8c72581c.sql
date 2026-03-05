@@ -1,0 +1,1 @@
+DELETE FROM lessons WHERE topic = 'Equação do 2º grau: fórmula de Bhaskara';

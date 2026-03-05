@@ -31,15 +31,20 @@ REGRAS OBRIGATÓRIAS para criar a aula:
    - Bloco: $$formula$$ em linhas separadas
    - NUNCA deixe um $ aberto sem fechar
    - NUNCA use $ para indicar moeda ou qualquer outro propósito que não seja LaTeX
-   - NUNCA escreva coisas como "$x^2 - 5x + 6 = 0." com ponto dentro ou fora quebrando o $
+   - NUNCA escreva a mesma fórmula duas vezes (uma em LaTeX e outra em texto normal). Escreva SOMENTE a versão LaTeX.
+   - ERRADO: $x^2 - 5x + 6 = 0$ x2 - 5x + 6 = 0 (NÃO repita em texto puro!)
+   - ERRADO: $\\Delta$ Δ (NÃO repita o símbolo em Unicode!)
+   - ERRADO: $a = 1$ a = 1 (NÃO repita o valor em texto puro!)
    - CORRETO: a equação $x^2 - 5x + 6 = 0$ tem duas raízes
-   - ERRADO: a equação $x^2 - 5x + 6 = 0. tem duas raízes
+   - CORRETO: o discriminante $\\Delta = b^2 - 4ac$
+   - NUNCA escreva coisas como "$x^2 - 5x + 6 = 0." com ponto dentro ou fora quebrando o $
    - NUNCA use \\[ \\] ou \\( \\) como delimitadores
    - NUNCA use caracteres Unicode de math (𝑥, 𝑏, Δ etc) - SEMPRE use LaTeX: $x$, $b$, $\\Delta$
    - Use \\text{} para texto dentro de fórmulas: $v = \\frac{\\Delta s}{\\Delta t} \\text{ (em m/s)}$
    - Use \\cdot para multiplicação, não *
    - Sempre que citar uma fórmula, explique cada variável
    - REGRA DE OURO: Se você escreve um $, OBRIGATORIAMENTE escreva outro $ para fechar
+   - REGRA ANTI-DUPLICAÇÃO: Cada fórmula aparece UMA ÚNICA VEZ no texto. Sem versão alternativa.
 9. Crie tabelas comparativas quando útil
 10. Termine com um resumo tipo "mapa mental" em tópicos
 11. Seja COMPLETO e EXTENSO - cubra ABSOLUTAMENTE todo o conteúdo necessário para a série
@@ -62,7 +67,7 @@ ESTRUTURA DA AULA:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           {
