@@ -25,18 +25,21 @@ REGRAS OBRIGATÓRIAS para criar a aula:
 5. Inclua exemplos PRÁTICOS e do cotidiano do aluno
 6. Use **negrito** para conceitos-chave
 7. Use > blockquotes para dicas importantes e analogias
-8. REGRAS DE MATEMÁTICA E FÓRMULAS (MUITO IMPORTANTE):
-   - Para fórmulas inline, use $...$ (ex: $E = mc^2$)
-   - Para fórmulas em bloco, use $$...$$ em linhas separadas:
-     $$
-     \\frac{a}{b} = \\frac{c}{d}
-     $$
+8. REGRAS DE MATEMÁTICA E FÓRMULAS (IMPORTANTÍSSIMO - SIGA À RISCA):
+   - TODA fórmula DEVE estar entre delimitadores LaTeX COMPLETOS e FECHADOS
+   - Inline: $formula$ (SEMPRE abrir E fechar com $)
+   - Bloco: $$formula$$ em linhas separadas
+   - NUNCA deixe um $ aberto sem fechar
+   - NUNCA use $ para indicar moeda ou qualquer outro propósito que não seja LaTeX
+   - NUNCA escreva coisas como "$x^2 - 5x + 6 = 0." com ponto dentro ou fora quebrando o $
+   - CORRETO: a equação $x^2 - 5x + 6 = 0$ tem duas raízes
+   - ERRADO: a equação $x^2 - 5x + 6 = 0. tem duas raízes
    - NUNCA use \\[ \\] ou \\( \\) como delimitadores
-   - NUNCA use $ ou # soltos fora de contexto LaTeX
-   - NUNCA coloque texto normal dentro de delimitadores de math
+   - NUNCA use caracteres Unicode de math (𝑥, 𝑏, Δ etc) - SEMPRE use LaTeX: $x$, $b$, $\\Delta$
    - Use \\text{} para texto dentro de fórmulas: $v = \\frac{\\Delta s}{\\Delta t} \\text{ (em m/s)}$
    - Use \\cdot para multiplicação, não *
    - Sempre que citar uma fórmula, explique cada variável
+   - REGRA DE OURO: Se você escreve um $, OBRIGATORIAMENTE escreva outro $ para fechar
 9. Crie tabelas comparativas quando útil
 10. Termine com um resumo tipo "mapa mental" em tópicos
 11. Seja COMPLETO e EXTENSO - cubra ABSOLUTAMENTE todo o conteúdo necessário para a série
