@@ -47,6 +47,120 @@ export type Database = {
         }
         Relationships: []
       }
+      battle_challenges: {
+        Row: {
+          challenger_key: string
+          challenger_name: string
+          challenger_score: number
+          created_at: string
+          id: string
+          opponent_key: string | null
+          opponent_name: string | null
+          opponent_score: number
+          questions: Json
+          status: string
+          subject: string
+          winner_key: string | null
+        }
+        Insert: {
+          challenger_key: string
+          challenger_name?: string
+          challenger_score?: number
+          created_at?: string
+          id?: string
+          opponent_key?: string | null
+          opponent_name?: string | null
+          opponent_score?: number
+          questions?: Json
+          status?: string
+          subject: string
+          winner_key?: string | null
+        }
+        Update: {
+          challenger_key?: string
+          challenger_name?: string
+          challenger_score?: number
+          created_at?: string
+          id?: string
+          opponent_key?: string | null
+          opponent_name?: string | null
+          opponent_score?: number
+          questions?: Json
+          status?: string
+          subject?: string
+          winner_key?: string | null
+        }
+        Relationships: []
+      }
+      daily_missions: {
+        Row: {
+          completed_count: number
+          created_at: string
+          id: string
+          mission_date: string
+          missions: Json
+          total_count: number
+          user_key: string
+          xp_reward: number
+        }
+        Insert: {
+          completed_count?: number
+          created_at?: string
+          id?: string
+          mission_date?: string
+          missions?: Json
+          total_count?: number
+          user_key: string
+          xp_reward?: number
+        }
+        Update: {
+          completed_count?: number
+          created_at?: string
+          id?: string
+          mission_date?: string
+          missions?: Json
+          total_count?: number
+          user_key?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      exam_reports: {
+        Row: {
+          created_at: string
+          difficulty: number
+          exam_date: string
+          grade: string
+          id: string
+          notes: string | null
+          subject: string
+          topics_appeared: Json
+          user_key: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: number
+          exam_date?: string
+          grade: string
+          id?: string
+          notes?: string | null
+          subject: string
+          topics_appeared?: Json
+          user_key: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: number
+          exam_date?: string
+          grade?: string
+          id?: string
+          notes?: string | null
+          subject?: string
+          topics_appeared?: Json
+          user_key?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
@@ -100,6 +214,249 @@ export type Database = {
           id?: string
           subject?: string
           topic?: string
+        }
+        Relationships: []
+      }
+      question_bank: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          difficulty: number
+          grade: string
+          id: string
+          options: Json
+          question_text: string
+          source: string | null
+          subject: string
+          topic: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          difficulty?: number
+          grade: string
+          id?: string
+          options?: Json
+          question_text: string
+          source?: string | null
+          subject: string
+          topic: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          difficulty?: number
+          grade?: string
+          id?: string
+          options?: Json
+          question_text?: string
+          source?: string | null
+          subject?: string
+          topic?: string
+        }
+        Relationships: []
+      }
+      school_missions: {
+        Row: {
+          active: boolean
+          created_at: string
+          current_count: number
+          description: string | null
+          end_date: string
+          id: string
+          reward_xp: number
+          start_date: string
+          target_count: number
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          current_count?: number
+          description?: string | null
+          end_date: string
+          id?: string
+          reward_xp?: number
+          start_date?: string
+          target_count: number
+          title: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          current_count?: number
+          description?: string | null
+          end_date?: string
+          id?: string
+          reward_xp?: number
+          start_date?: string
+          target_count?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      student_errors: {
+        Row: {
+          correct_answer: string | null
+          created_at: string
+          error_count: number
+          grade: string
+          id: string
+          last_error_at: string
+          question_text: string
+          resolved: boolean
+          subject: string
+          topic: string
+          user_key: string
+          wrong_answer: string | null
+        }
+        Insert: {
+          correct_answer?: string | null
+          created_at?: string
+          error_count?: number
+          grade: string
+          id?: string
+          last_error_at?: string
+          question_text: string
+          resolved?: boolean
+          subject: string
+          topic: string
+          user_key: string
+          wrong_answer?: string | null
+        }
+        Update: {
+          correct_answer?: string | null
+          created_at?: string
+          error_count?: number
+          grade?: string
+          id?: string
+          last_error_at?: string
+          question_text?: string
+          resolved?: boolean
+          subject?: string
+          topic?: string
+          user_key?: string
+          wrong_answer?: string | null
+        }
+        Relationships: []
+      }
+      student_profiles: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          last_study_date: string | null
+          learning_style: string | null
+          level: number
+          streak_days: number
+          total_study_minutes: number
+          user_key: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          last_study_date?: string | null
+          learning_style?: string | null
+          level?: number
+          streak_days?: number
+          total_study_minutes?: number
+          user_key: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          last_study_date?: string | null
+          learning_style?: string | null
+          level?: number
+          streak_days?: number
+          total_study_minutes?: number
+          user_key?: string
+          xp?: number
+        }
+        Relationships: []
+      }
+      student_topic_progress: {
+        Row: {
+          avg_response_time_ms: number | null
+          correct_count: number
+          created_at: string
+          grade: string
+          id: string
+          last_practiced_at: string | null
+          mastery_percent: number
+          subject: string
+          topic: string
+          total_attempts: number
+          user_key: string
+          wrong_count: number
+        }
+        Insert: {
+          avg_response_time_ms?: number | null
+          correct_count?: number
+          created_at?: string
+          grade: string
+          id?: string
+          last_practiced_at?: string | null
+          mastery_percent?: number
+          subject: string
+          topic: string
+          total_attempts?: number
+          user_key: string
+          wrong_count?: number
+        }
+        Update: {
+          avg_response_time_ms?: number | null
+          correct_count?: number
+          created_at?: string
+          grade?: string
+          id?: string
+          last_practiced_at?: string | null
+          mastery_percent?: number
+          subject?: string
+          topic?: string
+          total_attempts?: number
+          user_key?: string
+          wrong_count?: number
+        }
+        Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          duration_minutes: number
+          ended_at: string | null
+          grade: string | null
+          id: string
+          session_type: string
+          started_at: string
+          subject: string | null
+          topic: string | null
+          user_key: string
+        }
+        Insert: {
+          duration_minutes?: number
+          ended_at?: string | null
+          grade?: string | null
+          id?: string
+          session_type?: string
+          started_at?: string
+          subject?: string | null
+          topic?: string | null
+          user_key: string
+        }
+        Update: {
+          duration_minutes?: number
+          ended_at?: string | null
+          grade?: string | null
+          id?: string
+          session_type?: string
+          started_at?: string
+          subject?: string | null
+          topic?: string | null
+          user_key?: string
         }
         Relationships: []
       }
