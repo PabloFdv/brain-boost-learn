@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.auth-validate]
 verify_jwt = false
+
+[functions.gamification]
+verify_jwt = false
