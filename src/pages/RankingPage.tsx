@@ -1,12 +1,16 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import { useRanking, useProfile } from "@/hooks/useGamification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Trophy, Medal, Flame } from "lucide-react";
+import { TURMAS } from "@/lib/constants";
 
 export default function RankingPage() {
-  const { ranking, loading } = useRanking();
+  const [selectedTurma, setSelectedTurma] = useState<string>("");
+  const { ranking, loading } = useRanking(selectedTurma || undefined);
   const { profile } = useProfile();
 
   return (
@@ -20,6 +24,15 @@ export default function RankingPage() {
           </h1>
           <p className="text-muted-foreground mt-1">Os melhores estudantes da plataforma</p>
         </motion.div>
+
+        {/* Turma filter */}
+        <Select value={selectedTurma} onValueChange={(v) => setSelectedTurma(v === "all" ? "" : v)}>
+          <SelectTrigger className="max-w-64"><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as turmas</SelectItem>
+            {TURMAS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
         {/* Podium */}
         {ranking.length >= 3 && (
@@ -67,7 +80,7 @@ export default function RankingPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{r.display_name}</div>
-                  <div className="text-xs text-muted-foreground">Nível {r.level}</div>
+                  <div className="text-xs text-muted-foreground">Nível {r.level} {r.turma ? `• ${r.turma}` : ""}</div>
                 </div>
                 {r.streak_days > 0 && (
                   <Badge variant="outline" className="gap-1 text-xs">

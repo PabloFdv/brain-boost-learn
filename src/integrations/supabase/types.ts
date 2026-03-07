@@ -350,6 +350,7 @@ export type Database = {
           level: number
           streak_days: number
           total_study_minutes: number
+          turma: string | null
           user_key: string
           xp: number
         }
@@ -362,6 +363,7 @@ export type Database = {
           level?: number
           streak_days?: number
           total_study_minutes?: number
+          turma?: string | null
           user_key: string
           xp?: number
         }
@@ -374,6 +376,7 @@ export type Database = {
           level?: number
           streak_days?: number
           total_study_minutes?: number
+          turma?: string | null
           user_key?: string
           xp?: number
         }

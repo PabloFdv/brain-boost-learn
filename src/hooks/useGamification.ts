@@ -33,6 +33,7 @@ export interface StudentProfile {
   last_study_date: string | null;
   total_study_minutes: number;
   learning_style: string;
+  turma: string | null;
 }
 
 export function useProfile() {
@@ -55,16 +56,18 @@ export function useProfile() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  return { profile, loading, refresh };
+  return { profile, loading, refresh, setProfile };
 }
 
-export function useRanking() {
+export function useRanking(turma?: string) {
   const [ranking, setRanking] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    callGamification("get_ranking").then(r => setRanking(r.ranking || [])).catch(console.error).finally(() => setLoading(false));
-  }, []);
+    const params: any = {};
+    if (turma) params.turma = turma;
+    callGamification("get_ranking", params).then(r => setRanking(r.ranking || [])).catch(console.error).finally(() => setLoading(false));
+  }, [turma]);
 
   return { ranking, loading };
 }
@@ -151,6 +154,10 @@ export async function getBattles(userKey: string) {
   return callGamification("get_battles", { user_key: userKey });
 }
 
+export async function deleteBattle(battleId: string, userKey: string) {
+  return callGamification("delete_battle", { battle_id: battleId, user_key: userKey });
+}
+
 export async function joinBattle(battleId: string, opponentKey: string, opponentName: string) {
   return callGamification("join_battle", { battle_id: battleId, opponent_key: opponentKey, opponent_name: opponentName });
 }
@@ -159,8 +166,24 @@ export async function submitBattleScore(battleId: string, userKey: string, score
   return callGamification("submit_battle_score", { battle_id: battleId, user_key: userKey, score });
 }
 
-export async function updateProfileName(userKey: string, displayName: string) {
-  return callGamification("update_profile_name", { user_key: userKey, display_name: displayName });
+export async function updateProfile(userKey: string, data: { display_name?: string; turma?: string }) {
+  return callGamification("update_profile", { user_key: userKey, ...data });
+}
+
+export async function getAllStudents() {
+  return callGamification("get_all_students");
+}
+
+export async function getStudentsByTurma(turma: string) {
+  return callGamification("get_students_by_turma", { turma });
+}
+
+export async function getTurmaStats(turma: string) {
+  return callGamification("get_turma_stats", { turma });
+}
+
+export async function getStudentDetail(userKey: string) {
+  return callGamification("get_student_detail", { user_key: userKey });
 }
 
 export { callGamification };
