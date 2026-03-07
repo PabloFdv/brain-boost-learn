@@ -6,33 +6,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Target, Clock, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { Target, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const SUBJECTS = [
-  { id: "matematica", name: "Matemática" },
-  { id: "portugues", name: "Português" },
-  { id: "historia", name: "História" },
-  { id: "ciencias", name: "Ciências" },
-  { id: "geografia", name: "Geografia" },
-  { id: "fisica", name: "Física" },
-  { id: "quimica", name: "Química" },
-];
+import { ALL_SUBJECTS } from "@/lib/constants";
 
 export default function SimulatorPage() {
   const userKey = useUserKey();
   const { toast } = useToast();
   const [subject, setSubject] = useState("matematica");
   const [numQuestions, setNumQuestions] = useState("10");
-  const [timeLimit, setTimeLimit] = useState("30");
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<any[]>([]);
   const [finished, setFinished] = useState(false);
-  const [startTime] = useState(Date.now());
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
+  const [startTime] = useState(Date.now());
 
   const handleStart = async () => {
     setGenerating(true);
@@ -43,7 +33,7 @@ export default function SimulatorPage() {
         body: JSON.stringify({ grade: "9ano", subject, topic: "Simulado Geral", numQuestions: parseInt(numQuestions) }),
       });
       const data = await res.json();
-      if (data.questions && data.questions.length > 0) {
+      if (data.questions?.length > 0) {
         setQuestions(data.questions);
         setCurrentQ(0);
         setAnswers([]);
@@ -51,7 +41,7 @@ export default function SimulatorPage() {
       } else {
         toast({ title: "Erro ao gerar questões", variant: "destructive" });
       }
-    } catch (e) {
+    } catch {
       toast({ title: "Erro ao gerar simulado", variant: "destructive" });
     }
     setGenerating(false);
@@ -84,10 +74,10 @@ export default function SimulatorPage() {
     }, 1200);
   };
 
-  // Results
   if (finished) {
     const totalCorrect = answers.filter(a => a.correct).length;
     const grade = (totalCorrect / questions.length) * 10;
+    const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -96,7 +86,7 @@ export default function SimulatorPage() {
             <Card className="text-center">
               <CardContent className="p-8 space-y-4">
                 <div className="text-6xl">{grade >= 7 ? "🎉" : grade >= 5 ? "😊" : "😅"}</div>
-                <h2 className="text-3xl font-bold">Simulado Finalizado!</h2>
+                <h2 className="text-3xl font-bold">Simulado de {subjectName}</h2>
                 <div className="text-5xl font-bold text-primary">{grade.toFixed(1)}</div>
                 <div className="text-muted-foreground">Nota estimada</div>
                 <div className="flex justify-center gap-6">
@@ -118,7 +108,6 @@ export default function SimulatorPage() {
     );
   }
 
-  // Playing
   if (questions.length > 0) {
     const q = questions[currentQ];
     const opts = q.options || q.alternatives || [];
@@ -156,7 +145,6 @@ export default function SimulatorPage() {
     );
   }
 
-  // Setup
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -178,7 +166,7 @@ export default function SimulatorPage() {
               <Select value={subject} onValueChange={setSubject}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

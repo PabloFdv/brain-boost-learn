@@ -1,29 +1,14 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
-import { useUserKey, useProfile, getBattles, createBattle, joinBattle, submitBattleScore } from "@/hooks/useGamification";
+import { useUserKey, useProfile, getBattles, createBattle, joinBattle, submitBattleScore, deleteBattle } from "@/hooks/useGamification";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Swords, Trophy, Clock, Users } from "lucide-react";
+import { Swords, Trophy, Clock, Users, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const BATTLE_SUBJECTS = [
-  { id: "matematica", name: "Matemática" },
-  { id: "portugues", name: "Português" },
-  { id: "historia", name: "História" },
-  { id: "ciencias", name: "Ciências" },
-  { id: "geografia", name: "Geografia" },
-];
-
-const SAMPLE_QUESTIONS = [
-  { q: "Quanto é 15 × 8?", options: ["110", "120", "130", "140"], correct: "120" },
-  { q: "Quanto é 144 ÷ 12?", options: ["10", "11", "12", "13"], correct: "12" },
-  { q: "Quanto é 7² + 3²?", options: ["52", "58", "49", "40"], correct: "58" },
-  { q: "Qual raiz de 169?", options: ["11", "12", "13", "14"], correct: "13" },
-  { q: "Quanto é 25% de 200?", options: ["25", "40", "50", "75"], correct: "50" },
-];
+import { ALL_SUBJECTS, SAMPLE_QUESTIONS_BY_SUBJECT } from "@/lib/constants";
 
 export default function BattlePage() {
   const userKey = useUserKey();
@@ -39,23 +24,37 @@ export default function BattlePage() {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
+  const loadBattles = () => {
     if (userKey) {
       getBattles(userKey).then(r => setBattles(r.battles || [])).catch(console.error).finally(() => setLoading(false));
     }
-  }, [userKey]);
+  };
+
+  useEffect(() => { loadBattles(); }, [userKey]);
 
   const handleCreate = async () => {
     if (!userKey || !profile) return;
     setCreating(true);
     try {
-      const res = await createBattle(userKey, profile.display_name, subject, SAMPLE_QUESTIONS);
+      const questions = SAMPLE_QUESTIONS_BY_SUBJECT[subject] || SAMPLE_QUESTIONS_BY_SUBJECT.matematica;
+      const res = await createBattle(userKey, profile.display_name, subject, questions);
       setBattles(prev => [res.battle, ...prev]);
-      toast({ title: "Batalha criada!", description: "Aguardando oponente..." });
-    } catch (e) {
+      toast({ title: "⚔️ Batalha criada!", description: `Matéria: ${ALL_SUBJECTS.find(s => s.id === subject)?.name}. Aguardando oponente...` });
+    } catch {
       toast({ title: "Erro", description: "Falha ao criar batalha", variant: "destructive" });
     }
     setCreating(false);
+  };
+
+  const handleDelete = async (battleId: string) => {
+    if (!userKey) return;
+    try {
+      await deleteBattle(battleId, userKey);
+      setBattles(prev => prev.filter(b => b.id !== battleId));
+      toast({ title: "Batalha removida" });
+    } catch {
+      toast({ title: "Erro ao remover", variant: "destructive" });
+    }
   };
 
   const handleJoin = async (battle: any) => {
@@ -65,17 +64,29 @@ export default function BattlePage() {
       setPlaying(res.battle);
       setCurrentQ(0);
       setScore(0);
-    } catch (e) {
+      setAnswered(false);
+      setSelectedAnswer(null);
+    } catch {
       toast({ title: "Erro", variant: "destructive" });
     }
+  };
+
+  const startPlay = (battle: any) => {
+    setPlaying(battle);
+    setCurrentQ(0);
+    setScore(0);
+    setAnswered(false);
+    setSelectedAnswer(null);
   };
 
   const handleAnswer = (answer: string) => {
     if (answered) return;
     setAnswered(true);
     setSelectedAnswer(answer);
-    const questions = playing?.questions || SAMPLE_QUESTIONS;
-    if (answer === questions[currentQ]?.correct) setScore(s => s + 1);
+    const questions = playing?.questions || [];
+    const isCorrect = answer === questions[currentQ]?.correct;
+    const newScore = isCorrect ? score + 1 : score;
+    if (isCorrect) setScore(newScore);
 
     setTimeout(() => {
       if (currentQ + 1 < questions.length) {
@@ -83,25 +94,27 @@ export default function BattlePage() {
         setAnswered(false);
         setSelectedAnswer(null);
       } else {
-        // Battle complete
         if (userKey && playing) {
-          submitBattleScore(playing.id, userKey, score + (answer === questions[currentQ]?.correct ? 1 : 0));
+          submitBattleScore(playing.id, userKey, newScore);
         }
-        toast({ title: "Batalha finalizada!", description: `Você acertou ${score + (answer === questions[currentQ]?.correct ? 1 : 0)}/${questions.length}` });
+        toast({ title: "⚔️ Batalha finalizada!", description: `Você acertou ${newScore}/${questions.length}` });
         setPlaying(null);
+        loadBattles();
       }
-    }, 1500);
+    }, 1200);
   };
 
-  // Playing mode
   if (playing) {
-    const questions = playing.questions || SAMPLE_QUESTIONS;
+    const questions = playing.questions || [];
     const q = questions[currentQ];
+    if (!q) return null;
+    const subjectName = ALL_SUBJECTS.find(s => s.id === playing.subject)?.name || playing.subject;
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto p-4 md:p-6 max-w-xl">
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <Badge variant="outline">{subjectName}</Badge>
             <Badge variant="outline">Questão {currentQ + 1}/{questions.length}</Badge>
             <Badge className="gap-1"><Trophy className="h-3 w-3" />{score} acertos</Badge>
           </div>
@@ -135,69 +148,78 @@ export default function BattlePage() {
             <Swords className="h-8 w-8 text-red-500" />
             Batalha
           </h1>
-          <p className="text-muted-foreground mt-1">Desafie outros alunos!</p>
+          <p className="text-muted-foreground mt-1">Desafie outros alunos em qualquer matéria!</p>
         </motion.div>
 
-        {/* Create Battle */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Criar Desafio</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle className="text-lg">Criar Desafio</CardTitle></CardHeader>
           <CardContent className="flex gap-3">
             <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger className="flex-1">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="flex-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {BATTLE_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Button onClick={handleCreate} disabled={creating}>
-              <Swords className="h-4 w-4 mr-2" />
+              {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Swords className="h-4 w-4 mr-2" />}
               {creating ? "Criando..." : "Criar"}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Battles List */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Batalhas Disponíveis
+              Batalhas
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {loading ? (
               <div className="text-center text-muted-foreground py-8">Carregando...</div>
             ) : battles.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">Nenhuma batalha disponível. Crie uma!</div>
-            ) : battles.map((b: any) => (
-              <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                <div className="flex-1">
-                  <div className="font-medium">{b.challenger_name} {b.opponent_name ? `vs ${b.opponent_name}` : "(aguardando...)"}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    <Clock className="h-3 w-3" />
-                    {new Date(b.created_at).toLocaleDateString()}
-                    <Badge variant="outline" className="text-xs">{b.subject}</Badge>
+              <div className="text-center text-muted-foreground py-8">Nenhuma batalha. Crie uma!</div>
+            ) : battles.map((b: any) => {
+              const subjectName = ALL_SUBJECTS.find(s => s.id === b.subject)?.name || b.subject;
+              return (
+                <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg border">
+                  <div className="flex-1">
+                    <div className="font-medium">
+                      {b.challenger_name} {b.opponent_name ? `vs ${b.opponent_name}` : "(aguardando...)"}
+                    </div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                      <Clock className="h-3 w-3" />
+                      {new Date(b.created_at).toLocaleDateString("pt-BR")}
+                      <Badge variant="outline" className="text-xs">{subjectName}</Badge>
+                      {b.status === "completed" && (
+                        <span className="text-xs">{b.challenger_score} × {b.opponent_score}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {b.status === "pending" && b.challenger_key !== userKey && (
+                      <Button size="sm" onClick={() => handleJoin(b)}>Aceitar</Button>
+                    )}
+                    {b.status === "completed" && (
+                      <Badge variant={b.winner_key === userKey ? "default" : b.winner_key === "draw" ? "secondary" : "destructive"}>
+                        {b.winner_key === userKey ? "Vitória!" : b.winner_key === "draw" ? "Empate" : "Derrota"}
+                      </Badge>
+                    )}
+                    {b.status === "pending" && b.challenger_key === userKey && (
+                      <Badge variant="outline">Aguardando</Badge>
+                    )}
+                    {b.status === "active" && (
+                      <Button size="sm" onClick={() => startPlay(b)}>Jogar</Button>
+                    )}
+                    {(b.challenger_key === userKey || b.status === "completed") && (
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(b.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
-                {b.status === "pending" && b.challenger_key !== userKey && (
-                  <Button size="sm" onClick={() => handleJoin(b)}>Aceitar</Button>
-                )}
-                {b.status === "completed" && (
-                  <Badge variant={b.winner_key === userKey ? "default" : "secondary"}>
-                    {b.winner_key === userKey ? "Vitória!" : b.winner_key === "draw" ? "Empate" : "Derrota"}
-                  </Badge>
-                )}
-                {b.status === "pending" && b.challenger_key === userKey && (
-                  <Badge variant="outline">Aguardando</Badge>
-                )}
-                {b.status === "active" && (
-                  <Button size="sm" onClick={() => { setPlaying(b); setCurrentQ(0); setScore(0); }}>Jogar</Button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       </div>

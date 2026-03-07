@@ -2,12 +2,16 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
-import { useProfile, useBrainMap, useDailyMissions, useErrors, useUserKey, getGradePrediction } from "@/hooks/useGamification";
+import { useProfile, useBrainMap, useDailyMissions, useErrors, useUserKey, getGradePrediction, updateProfile } from "@/hooks/useGamification";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Flame, Trophy, Brain, Target, Zap, BookOpen, Swords, Timer, TrendingUp, AlertTriangle, Map, Sparkles, GraduationCap } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Flame, Trophy, Brain, Target, Zap, BookOpen, Swords, Timer, TrendingUp, AlertTriangle, Map, Sparkles, GraduationCap, Pencil, Check, X, Users } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { TURMAS } from "@/lib/constants";
 
 const LEVEL_NAMES: Record<number, string> = {
   1: "Iniciante", 2: "Aprendiz", 3: "Aprendiz", 4: "Aprendiz", 5: "Estudante",
@@ -29,18 +33,46 @@ function totalXpForLevel(level: number): number {
 }
 
 export default function StudentDashboard() {
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, refresh, setProfile } = useProfile();
   const { topics: brainTopics, loading: brainLoading } = useBrainMap();
   const { missions, loading: missionsLoading } = useDailyMissions();
   const { errors, loading: errorsLoading } = useErrors();
   const userKey = useUserKey();
+  const { toast } = useToast();
   const [predictions, setPredictions] = useState<any[]>([]);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [editingTurma, setEditingTurma] = useState(false);
 
   useEffect(() => {
     if (userKey) {
       getGradePrediction(userKey).then(r => setPredictions(r.predictions || [])).catch(console.error);
     }
   }, [userKey]);
+
+  const handleSaveName = async () => {
+    if (!userKey || !newName.trim()) return;
+    try {
+      const res = await updateProfile(userKey, { display_name: newName.trim() });
+      setProfile(res.profile);
+      setEditingName(false);
+      toast({ title: "Nome atualizado! ✅" });
+    } catch {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    }
+  };
+
+  const handleSaveTurma = async (turma: string) => {
+    if (!userKey) return;
+    try {
+      const res = await updateProfile(userKey, { turma });
+      setProfile(res.profile);
+      setEditingTurma(false);
+      toast({ title: "Turma atualizada! ✅" });
+    } catch {
+      toast({ title: "Erro ao salvar", variant: "destructive" });
+    }
+  };
 
   if (profileLoading) {
     return (
@@ -60,9 +92,6 @@ export default function StudentDashboard() {
   const missionsList = missions?.missions || [];
   const completedMissions = (missionsList as any[]).filter((m: any) => m.current >= m.target).length;
 
-  const weakTopics = brainTopics.filter(t => t.mastery_percent < 50).slice(0, 5);
-  const strongTopics = brainTopics.filter(t => t.mastery_percent >= 70).slice(0, 5);
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -76,9 +105,23 @@ export default function StudentDashboard() {
                   <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold">
                     {profile?.display_name?.[0] || "E"}
                   </div>
-                  <div>
-                    <h1 className="text-2xl font-bold">{profile?.display_name}</h1>
-                    <div className="flex items-center gap-2 mt-1">
+                  <div className="flex-1">
+                    {editingName ? (
+                      <div className="flex items-center gap-2">
+                        <Input value={newName} onChange={e => setNewName(e.target.value)} className="h-8 max-w-48"
+                          placeholder="Seu nome" autoFocus onKeyDown={e => e.key === "Enter" && handleSaveName()} />
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveName}><Check className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingName(false)}><X className="h-4 w-4" /></Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold">{profile?.display_name}</h1>
+                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditingName(true); setNewName(profile?.display_name || ""); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
                       <Badge variant="secondary" className="gap-1">
                         <GraduationCap className="h-3 w-3" />
                         Nível {profile?.level} — {getLevelName(profile?.level || 1)}
@@ -86,8 +129,27 @@ export default function StudentDashboard() {
                       {(profile?.streak_days || 0) > 0 && (
                         <Badge variant="destructive" className="gap-1">
                           <Flame className="h-3 w-3" />
-                          {profile?.streak_days} dias
+                          {profile?.streak_days} dias seguidos 🔥
                         </Badge>
+                      )}
+                    </div>
+                    {/* Turma */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      {editingTurma ? (
+                        <Select value={profile?.turma || ""} onValueChange={handleSaveTurma}>
+                          <SelectTrigger className="h-7 text-xs max-w-64"><SelectValue placeholder="Selecionar turma" /></SelectTrigger>
+                          <SelectContent>
+                            {TURMAS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <button onClick={() => setEditingTurma(true)} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                          {profile?.turma || "Selecionar turma →"}
+                        </button>
+                      )}
+                      {editingTurma && (
+                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingTurma(false)}><X className="h-3 w-3" /></Button>
                       )}
                     </div>
                   </div>
@@ -109,19 +171,21 @@ export default function StudentDashboard() {
         </motion.div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           {[
-            { icon: Zap, label: "Estudo Rápido", href: "/auto-study?mode=quick", color: "text-yellow-500" },
-            { icon: Swords, label: "Batalha", href: "/battle", color: "text-red-500" },
-            { icon: Target, label: "Simulado", href: "/simulator", color: "text-blue-500" },
-            { icon: AlertTriangle, label: "Lab de Erros", href: "/error-lab", color: "text-orange-500" },
+            { icon: Zap, label: "Estudo Rápido", desc: "3 questões", href: "/auto-study?mode=quick", color: "text-yellow-500" },
+            { icon: Swords, label: "Batalha", desc: "Desafiar", href: "/battle", color: "text-red-500" },
+            { icon: Target, label: "Simulado", desc: "Modo prova", href: "/simulator", color: "text-blue-500" },
+            { icon: AlertTriangle, label: "Lab de Erros", desc: "Revisar", href: "/error-lab", color: "text-orange-500" },
+            { icon: Timer, label: "Foco", desc: "Cronômetro", href: "/focus", color: "text-purple-500" },
           ].map((action, i) => (
             <motion.div key={action.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Link to={action.href}>
                 <Card className="hover:border-primary/50 transition-all cursor-pointer group">
-                  <CardContent className="p-4 flex flex-col items-center gap-2 text-center">
-                    <action.icon className={`h-8 w-8 ${action.color} group-hover:scale-110 transition-transform`} />
+                  <CardContent className="p-4 flex flex-col items-center gap-1 text-center">
+                    <action.icon className={`h-7 w-7 ${action.color} group-hover:scale-110 transition-transform`} />
                     <span className="text-sm font-medium">{action.label}</span>
+                    <span className="text-xs text-muted-foreground">{action.desc}</span>
                   </CardContent>
                 </Card>
               </Link>
@@ -179,11 +243,11 @@ export default function StudentDashboard() {
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {brainTopics.slice(0, 10).map((t: any, i: number) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className={`text-lg ${t.mastery_percent >= 70 ? "" : t.mastery_percent >= 40 ? "" : ""}`}>
+                        <span className="text-lg">
                           {t.mastery_percent >= 70 ? "🟢" : t.mastery_percent >= 40 ? "🟡" : "🔴"}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm truncate">{t.topic}</div>
+                          <div className="text-sm truncate">{t.topic} <span className="text-xs text-muted-foreground">({t.subject})</span></div>
                           <Progress value={t.mastery_percent} className="h-1.5" />
                         </div>
                         <span className="text-xs text-muted-foreground">{t.mastery_percent}%</span>
@@ -265,18 +329,18 @@ export default function StudentDashboard() {
         {/* Navigation to more features */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           {[
-            { icon: Trophy, label: "Ranking", href: "/ranking", color: "text-yellow-500" },
-            { icon: Map, label: "GPS do Aprendizado", href: "/", color: "text-blue-500" },
-            { icon: Sparkles, label: "Estudo Automático", href: "/auto-study", color: "text-purple-500" },
-            { icon: Timer, label: "Cronômetro de Foco", href: "/focus", color: "text-red-500" },
-            { icon: BookOpen, label: "Aulas", href: "/", color: "text-green-500" },
-            { icon: Brain, label: "Cérebro da Turma", href: "/class-brain", color: "text-pink-500" },
-          ].map((item, i) => (
+            { icon: Trophy, label: "Ranking", desc: "Classificação", href: "/ranking", color: "text-yellow-500" },
+            { icon: Sparkles, label: "Estudo Automático", desc: "IA escolhe", href: "/auto-study", color: "text-purple-500" },
+            { icon: BookOpen, label: "Aulas", desc: "Conteúdo", href: "/", color: "text-green-500" },
+          ].map((item) => (
             <Link key={item.label} to={item.href}>
               <Card className="hover:border-primary/30 transition-all cursor-pointer">
                 <CardContent className="p-3 flex items-center gap-3">
                   <item.icon className={`h-5 w-5 ${item.color}`} />
-                  <span className="text-sm font-medium">{item.label}</span>
+                  <div>
+                    <span className="text-sm font-medium block">{item.label}</span>
+                    <span className="text-xs text-muted-foreground">{item.desc}</span>
+                  </div>
                 </CardContent>
               </Card>
             </Link>

@@ -36,7 +36,6 @@ serve(async (req) => {
     switch (action) {
       case "get_or_create_profile": {
         const { user_key, display_name } = params;
-        // Try to get existing
         let { data } = await sb.from("student_profiles").select("*").eq("user_key", user_key).maybeSingle();
         if (!data) {
           const { data: newProfile, error } = await sb.from("student_profiles")
@@ -45,12 +44,11 @@ serve(async (req) => {
           if (error) throw error;
           data = newProfile;
         }
-        // Update streak
         const today = new Date().toISOString().split("T")[0];
         if (data.last_study_date) {
           const lastDate = new Date(data.last_study_date);
           const todayDate = new Date(today);
-          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (86400000));
+          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / 86400000);
           if (diffDays === 1) {
             await sb.from("student_profiles").update({ streak_days: data.streak_days + 1, last_study_date: today }).eq("user_key", user_key);
             data.streak_days += 1;
@@ -68,6 +66,22 @@ serve(async (req) => {
         return json({ profile: data });
       }
 
+      case "update_profile": {
+        const { user_key, display_name, turma } = params;
+        const update: any = {};
+        if (display_name !== undefined) update.display_name = display_name;
+        if (turma !== undefined) update.turma = turma;
+        await sb.from("student_profiles").update(update).eq("user_key", user_key);
+        const { data } = await sb.from("student_profiles").select("*").eq("user_key", user_key).single();
+        return json({ profile: data });
+      }
+
+      case "update_profile_name": {
+        const { user_key, display_name } = params;
+        await sb.from("student_profiles").update({ display_name }).eq("user_key", user_key);
+        return json({ updated: true });
+      }
+
       case "add_xp": {
         const { user_key, amount, reason } = params;
         const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", user_key).single();
@@ -76,14 +90,11 @@ serve(async (req) => {
         const newLevel = calculateLevel(newXp);
         const leveledUp = newLevel > profile.level;
         await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
-        // Update school mission progress
-        await sb.from("school_missions").update({ current_count: profile.xp }).eq("active", true).gte("end_date", new Date().toISOString().split("T")[0]);
         return json({ xp: newXp, level: newLevel, leveled_up: leveledUp, xp_added: amount || 10 });
       }
 
       case "record_answer": {
         const { user_key, grade, subject, topic, correct, response_time_ms, question_text, wrong_answer, correct_answer } = params;
-        // Upsert topic progress
         const { data: existing } = await sb.from("student_topic_progress")
           .select("*").eq("user_key", user_key).eq("grade", grade).eq("subject", subject).eq("topic", topic).maybeSingle();
 
@@ -92,7 +103,7 @@ serve(async (req) => {
           const newWrong = existing.wrong_count + (correct ? 0 : 1);
           const newTotal = existing.total_attempts + 1;
           const mastery = Math.round((newCorrect / newTotal) * 100);
-          const avgTime = Math.round(((existing.avg_response_time_ms * existing.total_attempts) + (response_time_ms || 0)) / newTotal);
+          const avgTime = response_time_ms ? Math.round(((existing.avg_response_time_ms * existing.total_attempts) + response_time_ms) / newTotal) : existing.avg_response_time_ms;
           await sb.from("student_topic_progress").update({
             correct_count: newCorrect, wrong_count: newWrong, total_attempts: newTotal,
             mastery_percent: mastery, avg_response_time_ms: avgTime, last_practiced_at: new Date().toISOString()
@@ -106,7 +117,6 @@ serve(async (req) => {
           });
         }
 
-        // Record error if wrong
         if (!correct && question_text) {
           const { data: existingError } = await sb.from("student_errors")
             .select("*").eq("user_key", user_key).eq("question_text", question_text).maybeSingle();
@@ -121,8 +131,13 @@ serve(async (req) => {
           }
         }
 
-        // Add XP
-        const xpAmount = correct ? 15 : 5; // even wrong answers give some XP for trying
+        // Mark error as resolved if correct
+        if (correct && question_text) {
+          await sb.from("student_errors").update({ resolved: true })
+            .eq("user_key", user_key).eq("question_text", question_text).eq("resolved", false);
+        }
+
+        const xpAmount = correct ? 15 : 5;
         const { data: profile } = await sb.from("student_profiles").select("xp, level").eq("user_key", user_key).single();
         if (profile) {
           const newXp = profile.xp + xpAmount;
@@ -146,7 +161,10 @@ serve(async (req) => {
       }
 
       case "get_ranking": {
-        const { data } = await sb.from("student_profiles").select("display_name, xp, level, streak_days").order("xp", { ascending: false }).limit(50);
+        const { turma } = params;
+        let query = sb.from("student_profiles").select("user_key, display_name, xp, level, streak_days, turma").order("xp", { ascending: false }).limit(50);
+        if (turma) query = query.eq("turma", turma);
+        const { data } = await query;
         return json({ ranking: data || [] });
       }
 
@@ -155,7 +173,6 @@ serve(async (req) => {
         const today = new Date().toISOString().split("T")[0];
         let { data } = await sb.from("daily_missions").select("*").eq("user_key", user_key).eq("mission_date", today).maybeSingle();
         if (!data) {
-          // Generate missions
           const missions = [
             { id: "m1", title: "Responder 5 exercícios", target: 5, current: 0, type: "exercises", xp: 50 },
             { id: "m2", title: "Estudar por 10 minutos", target: 10, current: 0, type: "study_time", xp: 30 },
@@ -170,22 +187,9 @@ serve(async (req) => {
         return json({ missions: data });
       }
 
-      case "complete_mission": {
-        const { user_key, mission_id } = params;
-        const today = new Date().toISOString().split("T")[0];
-        const { data } = await sb.from("daily_missions").select("*").eq("user_key", user_key).eq("mission_date", today).single();
-        if (!data) return json({ error: "No missions today" }, 404);
-        const missions = (data.missions as any[]).map((m: any) => m.id === mission_id ? { ...m, current: m.target } : m);
-        const completedCount = missions.filter((m: any) => m.current >= m.target).length;
-        await sb.from("daily_missions").update({ missions, completed_count: completedCount }).eq("id", data.id);
-        return json({ missions, completed_count: completedCount });
-      }
-
       case "record_study_session": {
         const { user_key, grade, subject, topic, duration_minutes, session_type } = params;
         await sb.from("study_sessions").insert({ user_key, grade, subject, topic, duration_minutes: duration_minutes || 0, session_type: session_type || "lesson", ended_at: new Date().toISOString() });
-        // Update total study time
-        await sb.rpc("", {}).catch(() => {}); // fallback
         const { data: profile } = await sb.from("student_profiles").select("total_study_minutes").eq("user_key", user_key).single();
         if (profile) {
           await sb.from("student_profiles").update({ total_study_minutes: profile.total_study_minutes + (duration_minutes || 0) }).eq("user_key", user_key);
@@ -197,7 +201,6 @@ serve(async (req) => {
         const { user_key } = params;
         const { data: progress } = await sb.from("student_topic_progress").select("*").eq("user_key", user_key);
         if (!progress || progress.length === 0) return json({ predictions: [] });
-        // Group by subject and calculate weighted average
         const subjectMap: Record<string, { total: number; weighted: number }> = {};
         for (const p of progress) {
           if (!subjectMap[p.subject]) subjectMap[p.subject] = { total: 0, weighted: 0 };
@@ -206,7 +209,7 @@ serve(async (req) => {
         }
         const predictions = Object.entries(subjectMap).map(([subject, data]) => ({
           subject,
-          predicted_grade: Math.round((data.weighted / data.total) / 10) / 1 // 0-10 scale
+          predicted_grade: Math.round((data.weighted / data.total) / 10)
         }));
         return json({ predictions });
       }
@@ -221,13 +224,10 @@ serve(async (req) => {
         const { grade, subject } = params;
         const { data } = await sb.from("exam_reports").select("topics_appeared").eq("grade", grade).eq("subject", subject);
         if (!data || data.length === 0) return json({ radar: [] });
-        // Count topic frequency
         const topicCount: Record<string, number> = {};
         for (const report of data) {
           const topics = report.topics_appeared as string[];
-          for (const t of topics) {
-            topicCount[t] = (topicCount[t] || 0) + 1;
-          }
+          for (const t of topics) { topicCount[t] = (topicCount[t] || 0) + 1; }
         }
         const total = data.length;
         const radar = Object.entries(topicCount).map(([topic, count]) => ({
@@ -275,6 +275,18 @@ serve(async (req) => {
         return json({ battles: data || [] });
       }
 
+      case "delete_battle": {
+        const { battle_id, user_key } = params;
+        // Only allow deleting own pending battles
+        const { data: battle } = await sb.from("battle_challenges").select("*").eq("id", battle_id).single();
+        if (!battle) return json({ error: "Battle not found" }, 404);
+        if (battle.challenger_key !== user_key && battle.status !== "completed") {
+          return json({ error: "Cannot delete this battle" }, 403);
+        }
+        await sb.from("battle_challenges").delete().eq("id", battle_id);
+        return json({ deleted: true });
+      }
+
       case "join_battle": {
         const { battle_id, opponent_key, opponent_name } = params;
         await sb.from("battle_challenges").update({ opponent_key, opponent_name, status: "active" }).eq("id", battle_id);
@@ -288,17 +300,25 @@ serve(async (req) => {
         if (!battle) return json({ error: "Battle not found" }, 404);
         const isChallenger = battle.challenger_key === user_key;
         const update: any = isChallenger ? { challenger_score: score } : { opponent_score: score };
-        // Check if both have submitted
         const otherScore = isChallenger ? battle.opponent_score : battle.challenger_score;
-        if (otherScore > 0 || battle.status === "active") {
-          const myScore = score;
-          if (otherScore > 0) {
-            update.status = "completed";
-            update.winner_key = myScore > otherScore ? user_key : (otherScore > myScore ? (isChallenger ? battle.opponent_key : battle.challenger_key) : "draw");
-          }
+        const otherSubmitted = isChallenger ? (battle.opponent_key && battle.opponent_score > 0) : battle.challenger_score > 0;
+        
+        if (otherSubmitted) {
+          update.status = "completed";
+          update.winner_key = score > otherScore ? user_key : (otherScore > score ? (isChallenger ? battle.opponent_key : battle.challenger_key) : "draw");
         }
         await sb.from("battle_challenges").update(update).eq("id", battle_id);
-        return json({ updated: true });
+
+        // Add XP for battle participation
+        const xpAmount = score * 10 + 20;
+        const { data: profile } = await sb.from("student_profiles").select("xp, level").eq("user_key", user_key).single();
+        if (profile) {
+          const newXp = profile.xp + xpAmount;
+          const newLevel = calculateLevel(newXp);
+          await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
+        }
+
+        return json({ updated: true, xp_earned: xpAmount });
       }
 
       case "get_study_history": {
@@ -307,10 +327,36 @@ serve(async (req) => {
         return json({ sessions: data || [] });
       }
 
-      case "update_profile_name": {
-        const { user_key, display_name } = params;
-        await sb.from("student_profiles").update({ display_name }).eq("user_key", user_key);
-        return json({ updated: true });
+      // Admin endpoints
+      case "get_all_students": {
+        const { data } = await sb.from("student_profiles").select("*").order("xp", { ascending: false });
+        return json({ students: data || [] });
+      }
+
+      case "get_students_by_turma": {
+        const { turma } = params;
+        const { data } = await sb.from("student_profiles").select("*").eq("turma", turma).order("xp", { ascending: false });
+        return json({ students: data || [] });
+      }
+
+      case "get_turma_stats": {
+        const { turma } = params;
+        const { data: students } = await sb.from("student_profiles").select("*").eq("turma", turma);
+        if (!students || students.length === 0) return json({ stats: null });
+        const avgXp = Math.round(students.reduce((s, st) => s + st.xp, 0) / students.length);
+        const avgLevel = Math.round(students.reduce((s, st) => s + st.level, 0) / students.length);
+        const totalMinutes = students.reduce((s, st) => s + st.total_study_minutes, 0);
+        const activeStudents = students.filter(s => s.last_study_date).length;
+        return json({ stats: { total_students: students.length, avg_xp: avgXp, avg_level: avgLevel, total_minutes: totalMinutes, active_students: activeStudents } });
+      }
+
+      case "get_student_detail": {
+        const { user_key } = params;
+        const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", user_key).single();
+        const { data: progress } = await sb.from("student_topic_progress").select("*").eq("user_key", user_key);
+        const { data: errors } = await sb.from("student_errors").select("*").eq("user_key", user_key).eq("resolved", false);
+        const { data: sessions } = await sb.from("study_sessions").select("*").eq("user_key", user_key).order("started_at", { ascending: false }).limit(10);
+        return json({ profile, progress: progress || [], errors: errors || [], sessions: sessions || [] });
       }
 
       default:
