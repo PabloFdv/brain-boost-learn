@@ -141,7 +141,7 @@ const AdminDashboard = () => {
           <TabsContent value="students" className="space-y-6">
             {/* Turma Filter */}
             <div className="flex gap-3 items-center flex-wrap">
-              <Select value={selectedTurma} onValueChange={setSelectedTurma}>
+              <Select value={selectedTurma || "all"} onValueChange={(v) => setSelectedTurma(v === "all" ? "" : v)}>
                 <SelectTrigger className="max-w-72"><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as turmas</SelectItem>
