@@ -1,0 +1,1 @@
+ALTER TABLE public.global_keys ADD COLUMN IF NOT EXISTS turma text DEFAULT NULL;

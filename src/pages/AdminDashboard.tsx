@@ -27,7 +27,7 @@ interface AccessKey {
 interface GlobalKey {
   id: string; key: string; label: string; active: boolean;
   expires_at: string | null; max_uses: number | null; current_uses: number;
-  created_at: string;
+  created_at: string; turma: string | null;
 }
 
 const AdminDashboard = () => {
@@ -41,8 +41,7 @@ const AdminDashboard = () => {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   // Global key creation
-  const [gkLabel, setGkLabel] = useState("");
-  const [gkKey, setGkKey] = useState("");
+  const [gkTurma, setGkTurma] = useState("");
   const [gkExpiry, setGkExpiry] = useState("");
   const [gkMaxUses, setGkMaxUses] = useState("");
   const [creatingGlobal, setCreatingGlobal] = useState(false);
@@ -113,18 +112,21 @@ const AdminDashboard = () => {
   };
 
   const generateGlobalKey = async () => {
+    if (!gkTurma) {
+      toast({ title: "Selecione uma turma", variant: "destructive" });
+      return;
+    }
     setCreatingGlobal(true);
     try {
       const data = await apiCall("generate_global", {
-        label: gkLabel || "Key Global",
-        keyValue: gkKey || undefined,
+        turma: gkTurma,
         expiresAt: gkExpiry ? new Date(gkExpiry).toISOString() : undefined,
         maxUses: gkMaxUses ? parseInt(gkMaxUses) : undefined,
       });
       if (data.globalKey) {
         setGlobalKeys(prev => [data.globalKey, ...prev]);
-        toast({ title: "Key Global criada! 🌐", description: `Key: ${data.globalKey.key}` });
-        setGkLabel(""); setGkKey(""); setGkExpiry(""); setGkMaxUses("");
+        toast({ title: "Key Global criada! 🌐", description: `Turma: ${gkTurma} • Senha: ${data.globalKey.key}` });
+        setGkTurma(""); setGkExpiry(""); setGkMaxUses("");
       }
     } catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
     finally { setCreatingGlobal(false); }
@@ -152,42 +154,48 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="container mx-auto max-w-5xl px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <ShieldCheck className="h-8 w-8 text-primary" />
+      <div className="container mx-auto max-w-5xl px-3 sm:px-4 py-4 sm:py-6">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <ShieldCheck className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             <div>
-              <h1 className="text-2xl font-bold font-display text-foreground">Painel Admin</h1>
-              <p className="text-sm text-muted-foreground">Pablo Martins Santana</p>
+              <h1 className="text-lg sm:text-2xl font-bold font-display text-foreground">Painel Admin</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">Pablo Martins Santana</p>
             </div>
           </div>
           <Button variant="outline" size="sm" onClick={() => { logout(); navigate("/login"); }}>
-            <LogOut className="h-4 w-4 mr-2" />Sair
+            <LogOut className="h-4 w-4 sm:mr-2" /><span className="hidden sm:inline">Sair</span>
           </Button>
         </div>
 
-        <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid grid-cols-3 w-full max-w-lg">
-            <TabsTrigger value="students" className="gap-2"><Users className="h-4 w-4" />Alunos</TabsTrigger>
-            <TabsTrigger value="keys" className="gap-2"><Key className="h-4 w-4" />Individuais</TabsTrigger>
-            <TabsTrigger value="global" className="gap-2"><Globe className="h-4 w-4" />Globais</TabsTrigger>
+        <Tabs defaultValue="students" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid grid-cols-3 w-full">
+            <TabsTrigger value="students" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Alunos</span><span className="sm:hidden">Alunos</span>
+            </TabsTrigger>
+            <TabsTrigger value="keys" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Key className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Individuais</span><span className="sm:hidden">Keys</span>
+            </TabsTrigger>
+            <TabsTrigger value="global" className="gap-1 sm:gap-2 text-xs sm:text-sm">
+              <Globe className="h-3.5 w-3.5 sm:h-4 sm:w-4" /><span className="hidden sm:inline">Globais</span><span className="sm:hidden">Global</span>
+            </TabsTrigger>
           </TabsList>
 
           {/* Students Tab */}
-          <TabsContent value="students" className="space-y-6">
-            <div className="flex gap-3 items-center flex-wrap">
+          <TabsContent value="students" className="space-y-4 sm:space-y-6">
+            <div className="flex gap-2 sm:gap-3 items-center flex-wrap">
               <Select value={selectedTurma || "all"} onValueChange={(v) => setSelectedTurma(v === "all" ? "" : v)}>
-                <SelectTrigger className="max-w-72"><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
+                <SelectTrigger className="max-w-64 sm:max-w-72 text-xs sm:text-sm"><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas as turmas</SelectItem>
                   {TURMAS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Badge variant="outline">{filteredStudents.length} alunos</Badge>
+              <Badge variant="outline" className="text-xs">{filteredStudents.length} alunos</Badge>
             </div>
 
             {turmaStats && (
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-3">
                 {[
                   { label: "Alunos", value: turmaStats.total_students },
                   { label: "XP Médio", value: turmaStats.avg_xp },
@@ -196,9 +204,9 @@ const AdminDashboard = () => {
                   { label: "Ativos", value: turmaStats.active_students },
                 ].map(s => (
                   <Card key={s.label}>
-                    <CardContent className="p-3 text-center">
-                      <div className="text-xl font-bold text-primary">{s.value}</div>
-                      <div className="text-xs text-muted-foreground">{s.label}</div>
+                    <CardContent className="p-2.5 sm:p-3 text-center">
+                      <div className="text-lg sm:text-xl font-bold text-primary">{s.value}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</div>
                     </CardContent>
                   </Card>
                 ))}
@@ -206,27 +214,26 @@ const AdminDashboard = () => {
             )}
 
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-lg">Alunos</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
+              <CardHeader className="pb-2 sm:pb-3"><CardTitle className="text-base sm:text-lg">Alunos</CardTitle></CardHeader>
+              <CardContent className="space-y-1.5 sm:space-y-2">
                 {studentsLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Carregando...</div>
+                  <div className="text-center py-8 text-muted-foreground text-sm">Carregando...</div>
                 ) : filteredStudents.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">Nenhum aluno encontrado</div>
+                  <div className="text-center py-8 text-muted-foreground text-sm">Nenhum aluno encontrado</div>
                 ) : filteredStudents.map((s: any) => (
-                  <div key={s.user_key} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer"
+                  <div key={s.user_key} className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
                     onClick={() => handleViewStudent(s)}>
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-sm shrink-0">
                       {s.display_name?.[0] || "?"}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{s.display_name}</div>
-                      <div className="text-xs text-muted-foreground">{s.turma || "Sem turma"} • Nível {s.level}</div>
+                      <div className="text-sm font-medium truncate">{s.display_name}</div>
+                      <div className="text-[10px] sm:text-xs text-muted-foreground truncate">{s.turma || "Sem turma"} • Nv {s.level}</div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-bold text-primary text-sm">{s.xp} XP</div>
-                      <div className="text-xs text-muted-foreground">{s.total_study_minutes} min</div>
+                    <div className="text-right shrink-0">
+                      <div className="font-bold text-primary text-xs sm:text-sm">{s.xp} XP</div>
                     </div>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                   </div>
                 ))}
               </CardContent>
@@ -235,50 +242,37 @@ const AdminDashboard = () => {
             {selectedStudent && studentDetail && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <Card className="border-primary/30">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-2 sm:pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <User className="h-5 w-5" />{selectedStudent.display_name}
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        <User className="h-4 w-4 sm:h-5 sm:w-5" />{selectedStudent.display_name}
                       </CardTitle>
                       <Button variant="ghost" size="sm" onClick={() => { setSelectedStudent(null); setStudentDetail(null); }}>✕</Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <CardContent className="space-y-3 sm:space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
                       {[
                         { label: "XP Total", value: selectedStudent.xp },
-                        { label: "Nível", value: `Nível ${selectedStudent.level}` },
+                        { label: "Nível", value: `Nv ${selectedStudent.level}` },
                         { label: "Sequência", value: `${selectedStudent.streak_days}🔥` },
-                        { label: "Estudados", value: `${selectedStudent.total_study_minutes} min` },
+                        { label: "Estudados", value: `${selectedStudent.total_study_minutes}m` },
                       ].map(s => (
                         <div key={s.label} className="text-center p-2 bg-muted rounded-lg">
-                          <div className="font-bold text-primary">{s.value}</div>
-                          <div className="text-xs text-muted-foreground">{s.label}</div>
+                          <div className="font-bold text-primary text-sm">{s.value}</div>
+                          <div className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</div>
                         </div>
                       ))}
                     </div>
                     {studentDetail.progress?.length > 0 && (
                       <div>
-                        <h4 className="text-sm font-medium mb-2">Progresso por tópico</h4>
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                        <h4 className="text-xs sm:text-sm font-medium mb-2">Progresso por tópico</h4>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
                           {studentDetail.progress.map((p: any, i: number) => (
-                            <div key={i} className="flex items-center gap-2 text-sm">
-                              <span className={`w-2 h-2 rounded-full ${p.mastery_percent >= 70 ? "bg-green-500" : p.mastery_percent >= 40 ? "bg-yellow-500" : "bg-red-500"}`} />
+                            <div key={i} className="flex items-center gap-2 text-xs sm:text-sm">
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${p.mastery_percent >= 70 ? "bg-green-500" : p.mastery_percent >= 40 ? "bg-yellow-500" : "bg-red-500"}`} />
                               <span className="flex-1 truncate">{p.topic}</span>
-                              <span className="text-xs text-muted-foreground">{p.subject}</span>
-                              <span className="text-xs font-medium">{p.mastery_percent}%</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {studentDetail.errors?.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2 text-destructive">Erros ativos: {studentDetail.errors.length}</h4>
-                        <div className="space-y-1 max-h-32 overflow-y-auto">
-                          {studentDetail.errors.slice(0, 5).map((e: any, i: number) => (
-                            <div key={i} className="text-xs p-2 bg-destructive/5 rounded">
-                              {e.question_text} ({e.subject} • {e.error_count}x)
+                              <span className="text-[10px] text-muted-foreground shrink-0">{p.mastery_percent}%</span>
                             </div>
                           ))}
                         </div>
@@ -291,20 +285,18 @@ const AdminDashboard = () => {
           </TabsContent>
 
           {/* Individual Keys Tab */}
-          <TabsContent value="keys" className="space-y-6">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                <p className="text-2xl font-bold text-primary">{activeCount}</p>
-                <p className="text-xs text-muted-foreground">Disponíveis</p>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                <p className="text-2xl font-bold text-accent">{usedCount}</p>
-                <p className="text-xs text-muted-foreground">Usadas</p>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
-                <p className="text-2xl font-bold text-destructive">{blockedCount}</p>
-                <p className="text-xs text-muted-foreground">Bloqueadas</p>
-              </div>
+          <TabsContent value="keys" className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              {[
+                { label: "Disponíveis", value: activeCount, color: "text-primary" },
+                { label: "Usadas", value: usedCount, color: "text-accent" },
+                { label: "Bloqueadas", value: blockedCount, color: "text-destructive" },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl border border-border bg-card p-3 sm:p-4 text-center shadow-sm">
+                  <p className={`text-xl sm:text-2xl font-bold ${s.color}`}>{s.value}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{s.label}</p>
+                </div>
+              ))}
             </div>
 
             <Button onClick={generateKey} disabled={generating} className="w-full" size="lg">
@@ -313,48 +305,48 @@ const AdminDashboard = () => {
             </Button>
 
             {loading ? (
-              <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+              <div className="text-center py-12 text-muted-foreground text-sm">Carregando...</div>
             ) : keys.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                <Key className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhuma senha gerada ainda.</p>
+                <Key className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhuma senha gerada ainda.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {keys.map((k) => (
                   <motion.div key={k.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
+                    className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5 sm:mb-2">
                       <div className="flex items-center gap-2">
-                        <code className="text-lg font-bold font-mono text-foreground">{k.key}</code>
+                        <code className="text-sm sm:text-lg font-bold font-mono text-foreground">{k.key}</code>
                         <button onClick={() => copyKey(k.key)} className="text-muted-foreground hover:text-foreground transition-colors">
-                          {copiedKey === k.key ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                          {copiedKey === k.key ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                         </button>
                       </div>
-                      {k.blocked ? <Badge variant="destructive">Bloqueada</Badge>
-                        : k.used ? <Badge variant="secondary">Usada</Badge>
-                        : <Badge className="bg-primary/10 text-primary border-primary/20">Ativa</Badge>}
+                      {k.blocked ? <Badge variant="destructive" className="text-[10px]">Bloqueada</Badge>
+                        : k.used ? <Badge variant="secondary" className="text-[10px]">Usada</Badge>
+                        : <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">Ativa</Badge>}
                     </div>
-                    <div className="text-xs text-muted-foreground mb-3">
-                      Criada em {new Date(k.created_at).toLocaleDateString("pt-BR")}
-                      {k.used_by && ` • Usada por: ${k.used_by}`}
+                    <div className="text-[10px] sm:text-xs text-muted-foreground mb-2 sm:mb-3">
+                      {new Date(k.created_at).toLocaleDateString("pt-BR")}
+                      {k.used_by && ` • ${k.used_by}`}
                     </div>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-1.5 sm:gap-2 flex-wrap">
                       {k.blocked ? (
-                        <Button size="sm" variant="outline" onClick={() => handleAction("unblock", k.id, "Desbloqueada")}>
+                        <Button size="sm" variant="outline" className="text-xs h-7 sm:h-8" onClick={() => handleAction("unblock", k.id, "Desbloqueada")}>
                           <Unlock className="h-3 w-3 mr-1" /> Desbloquear
                         </Button>
                       ) : (
-                        <Button size="sm" variant="outline" onClick={() => handleAction("block", k.id, "Bloqueada")}>
+                        <Button size="sm" variant="outline" className="text-xs h-7 sm:h-8" onClick={() => handleAction("block", k.id, "Bloqueada")}>
                           <Ban className="h-3 w-3 mr-1" /> Bloquear
                         </Button>
                       )}
                       {k.used && (
-                        <Button size="sm" variant="outline" onClick={() => handleAction("reset", k.id, "Resetada")}>
-                          <RotateCcw className="h-3 w-3 mr-1" /> Resetar
+                        <Button size="sm" variant="outline" className="text-xs h-7 sm:h-8" onClick={() => handleAction("reset", k.id, "Resetada")}>
+                          <RotateCcw className="h-3 w-3 mr-1" /> Reset
                         </Button>
                       )}
-                      <Button size="sm" variant="destructive" onClick={() => handleAction("delete", k.id, "Apagada")}>
+                      <Button size="sm" variant="destructive" className="text-xs h-7 sm:h-8" onClick={() => handleAction("delete", k.id, "Apagada")}>
                         <Trash2 className="h-3 w-3 mr-1" /> Apagar
                       </Button>
                     </div>
@@ -365,34 +357,36 @@ const AdminDashboard = () => {
           </TabsContent>
 
           {/* Global Keys Tab */}
-          <TabsContent value="global" className="space-y-6">
+          <TabsContent value="global" className="space-y-4 sm:space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                   <Globe className="h-5 w-5" />
                   Criar Key Global
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
+              <CardContent className="space-y-3 sm:space-y-4">
+                <div>
+                  <Label className="text-xs font-medium">Turma *</Label>
+                  <Select value={gkTurma} onValueChange={setGkTurma}>
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Selecione a turma" /></SelectTrigger>
+                    <SelectContent>
+                      {TURMAS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">A senha será gerada automaticamente. Alunos dessa turma serão auto-vinculados.</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   <div>
-                    <Label className="text-xs">Nome/Label</Label>
-                    <Input placeholder="Ex: Turma 930" value={gkLabel} onChange={e => setGkLabel(e.target.value)} />
+                    <Label className="text-xs">Expira em (opcional)</Label>
+                    <Input type="datetime-local" value={gkExpiry} onChange={e => setGkExpiry(e.target.value)} className="mt-1 text-xs sm:text-sm" />
                   </div>
                   <div>
-                    <Label className="text-xs">Senha (opcional, gera auto)</Label>
-                    <Input placeholder="Ex: TURMA930" value={gkKey} onChange={e => setGkKey(e.target.value.toUpperCase())} />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Expira em</Label>
-                    <Input type="datetime-local" value={gkExpiry} onChange={e => setGkExpiry(e.target.value)} />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Máximo de usos (vazio = ilimitado)</Label>
-                    <Input type="number" placeholder="Ilimitado" value={gkMaxUses} onChange={e => setGkMaxUses(e.target.value)} />
+                    <Label className="text-xs">Máx. usos (opcional)</Label>
+                    <Input type="number" placeholder="∞" value={gkMaxUses} onChange={e => setGkMaxUses(e.target.value)} className="mt-1 text-xs sm:text-sm" />
                   </div>
                 </div>
-                <Button onClick={generateGlobalKey} disabled={creatingGlobal} className="w-full">
+                <Button onClick={generateGlobalKey} disabled={creatingGlobal || !gkTurma} className="w-full">
                   {creatingGlobal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
                   Criar Key Global
                 </Button>
@@ -401,41 +395,44 @@ const AdminDashboard = () => {
 
             {globalKeys.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Globe className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p>Nenhuma key global criada.</p>
+                <Globe className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhuma key global criada.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {globalKeys.map((gk) => (
                   <motion.div key={gk.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-border bg-card p-4 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <code className="text-lg font-bold font-mono text-foreground">{gk.key}</code>
-                        <button onClick={() => copyKey(gk.key)} className="text-muted-foreground hover:text-foreground">
-                          {copiedKey === gk.key ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                    className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <code className="text-sm sm:text-lg font-bold font-mono text-foreground truncate">{gk.key}</code>
+                        <button onClick={() => copyKey(gk.key)} className="text-muted-foreground hover:text-foreground shrink-0">
+                          {copiedKey === gk.key ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
                         </button>
                       </div>
-                      <Badge variant={gk.active ? "default" : "destructive"}>
-                        {gk.active ? "Ativa" : "Desativada"}
+                      <Badge variant={gk.active ? "default" : "destructive"} className="text-[10px] shrink-0">
+                        {gk.active ? "Ativa" : "Off"}
                       </Badge>
                     </div>
-                    <div className="text-sm font-medium">{gk.label}</div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
-                      <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{gk.current_uses} usos{gk.max_uses ? ` / ${gk.max_uses}` : ""}</span>
+                    <div className="text-xs sm:text-sm font-medium">{gk.label}</div>
+                    {gk.turma && (
+                      <Badge variant="secondary" className="text-[10px] mt-1">{gk.turma}</Badge>
+                    )}
+                    <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-2 sm:gap-3 mt-1.5 flex-wrap">
+                      <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{gk.current_uses}{gk.max_uses ? `/${gk.max_uses}` : ""}</span>
                       {gk.expires_at && (
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          Expira: {new Date(gk.expires_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          {new Date(gk.expires_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                     </div>
-                    <div className="flex gap-2 mt-3">
-                      <Button size="sm" variant="outline" onClick={() => handleAction("toggle_global", gk.id, gk.active ? "Desativada" : "Ativada")}>
+                    <div className="flex gap-1.5 mt-2.5">
+                      <Button size="sm" variant="outline" className="text-xs h-7 sm:h-8" onClick={() => handleAction("toggle_global", gk.id, gk.active ? "Desativada" : "Ativada")}>
                         {gk.active ? <ToggleRight className="h-3 w-3 mr-1" /> : <ToggleLeft className="h-3 w-3 mr-1" />}
                         {gk.active ? "Desativar" : "Ativar"}
                       </Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleAction("delete_global", gk.id, "Apagada")}>
+                      <Button size="sm" variant="destructive" className="text-xs h-7 sm:h-8" onClick={() => handleAction("delete_global", gk.id, "Apagada")}>
                         <Trash2 className="h-3 w-3 mr-1" /> Apagar
                       </Button>
                     </div>

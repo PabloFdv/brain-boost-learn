@@ -14,7 +14,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { key } = await req.json();
+    const body = await req.json();
+    const { key, device_id, full_name } = body;
+    
     if (!key || typeof key !== "string" || key.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Senha obrigatória" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -61,11 +63,64 @@ serve(async (req) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      // Increment usage
-      await sb.from("global_keys").update({
-        current_uses: globalKey.current_uses + 1,
-      }).eq("id", globalKey.id);
 
+      // For global keys, we use a composite device_id to track unique users
+      // device_id = globalKey.key + "_" + browser fingerprint
+      const userDeviceId = device_id || `global_${globalKey.key}_${crypto.randomUUID().slice(0, 8)}`;
+      
+      // Check if this device already has a profile
+      const { data: existingProfile } = await sb.from("student_profiles")
+        .select("*")
+        .eq("user_key", userDeviceId)
+        .maybeSingle();
+
+      if (existingProfile) {
+        // Returning user - just log in
+        const token = crypto.randomUUID();
+        return new Response(JSON.stringify({
+          role: "user",
+          name: existingProfile.display_name,
+          token,
+          persistent: true,
+          key_type: "global",
+          user_device_id: userDeviceId,
+          needs_setup: false,
+          turma: globalKey.turma || null,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // New user with global key - if full_name provided, create profile
+      if (full_name && full_name.trim()) {
+        // Increment usage count
+        await sb.from("global_keys").update({
+          current_uses: globalKey.current_uses + 1,
+        }).eq("id", globalKey.id);
+
+        // Create student profile
+        await sb.from("student_profiles").insert({
+          user_key: userDeviceId,
+          display_name: full_name.trim(),
+          turma: globalKey.turma || null,
+        });
+
+        const token = crypto.randomUUID();
+        return new Response(JSON.stringify({
+          role: "user",
+          name: full_name.trim(),
+          token,
+          persistent: true,
+          key_type: "global",
+          user_device_id: userDeviceId,
+          needs_setup: false,
+          turma: globalKey.turma || null,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // New user - needs setup (name input)
       const token = crypto.randomUUID();
       return new Response(JSON.stringify({
         role: "user",
@@ -73,6 +128,10 @@ serve(async (req) => {
         token,
         persistent: true,
         key_type: "global",
+        user_device_id: userDeviceId,
+        needs_setup: true,
+        turma: globalKey.turma || null,
+        label: globalKey.label,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -100,7 +159,6 @@ serve(async (req) => {
     }
 
     if (keyData.used) {
-      // Allow re-login with used key (persistent login)
       const token = crypto.randomUUID();
       return new Response(JSON.stringify({
         role: "user",

@@ -201,6 +201,7 @@ export type Database = {
           key: string
           label: string
           max_uses: number | null
+          turma: string | null
         }
         Insert: {
           active?: boolean
@@ -212,6 +213,7 @@ export type Database = {
           key: string
           label?: string
           max_uses?: number | null
+          turma?: string | null
         }
         Update: {
           active?: boolean
@@ -223,6 +225,7 @@ export type Database = {
           key?: string
           label?: string
           max_uses?: number | null
+          turma?: string | null
         }
         Relationships: []
       }

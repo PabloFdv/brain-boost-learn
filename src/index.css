@@ -187,3 +187,15 @@
 .lesson-content .katex {
   font-size: 1.05em;
 }
+
+/* Safe area for bottom nav */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Add padding to main content when bottom nav is visible */
+@media (max-width: 1023px) {
+  body {
+    padding-bottom: 3.5rem;
+  }
+}
