@@ -3,18 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Plus, Trash2, Ban, RotateCcw, Copy, Check, LogOut, Key,
-  ShieldCheck, Loader2, Unlock, Users, BarChart3, User, ChevronDown
+  ShieldCheck, Loader2, Unlock, Users, User, ChevronDown,
+  Globe, Clock, Hash, ToggleLeft, ToggleRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Header from "@/components/Header";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { getAllStudents, getStudentsByTurma, getTurmaStats, getStudentDetail } from "@/hooks/useGamification";
+import { getAllStudents, getTurmaStats, getStudentDetail } from "@/hooks/useGamification";
 import { TURMAS } from "@/lib/constants";
 
 interface AccessKey {
@@ -22,14 +24,28 @@ interface AccessKey {
   used_by: string | null; created_at: string; used_at: string | null; blocked: boolean;
 }
 
+interface GlobalKey {
+  id: string; key: string; label: string; active: boolean;
+  expires_at: string | null; max_uses: number | null; current_uses: number;
+  created_at: string;
+}
+
 const AdminDashboard = () => {
   const { role, adminKey, logout } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [keys, setKeys] = useState<AccessKey[]>([]);
+  const [globalKeys, setGlobalKeys] = useState<GlobalKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  // Global key creation
+  const [gkLabel, setGkLabel] = useState("");
+  const [gkKey, setGkKey] = useState("");
+  const [gkExpiry, setGkExpiry] = useState("");
+  const [gkMaxUses, setGkMaxUses] = useState("");
+  const [creatingGlobal, setCreatingGlobal] = useState(false);
 
   // Student analytics
   const [allStudents, setAllStudents] = useState<any[]>([]);
@@ -57,9 +73,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     if (selectedTurma) {
       getTurmaStats(selectedTurma).then(r => setTurmaStats(r.stats)).catch(console.error);
-    } else {
-      setTurmaStats(null);
-    }
+    } else { setTurmaStats(null); }
   }, [selectedTurma]);
 
   const handleViewStudent = async (student: any) => {
@@ -70,19 +84,22 @@ const AdminDashboard = () => {
     } catch { setStudentDetail(null); }
   };
 
-  const apiCall = async (action: string, keyId?: string) => {
+  const apiCall = async (action: string, extra: any = {}) => {
     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-keys`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, adminKey, keyId }),
+      body: JSON.stringify({ action, adminKey, ...extra }),
     });
     if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || "Erro"); }
     return res.json();
   };
 
   const loadKeys = async () => {
-    try { const data = await apiCall("list"); setKeys(data.keys || []); }
-    catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
+    try {
+      const data = await apiCall("list");
+      setKeys(data.keys || []);
+      setGlobalKeys(data.globalKeys || []);
+    } catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
     finally { setLoading(false); }
   };
 
@@ -90,13 +107,31 @@ const AdminDashboard = () => {
     setGenerating(true);
     try {
       const data = await apiCall("generate");
-      if (data.key) { setKeys(prev => [data.key, ...prev]); toast({ title: "Senha criada! 🔑", description: `Senha: ${data.key.key}` }); }
+      if (data.key) { setKeys(prev => [data.key, ...prev]); toast({ title: "Senha individual criada! 🔑", description: `Senha: ${data.key.key}` }); }
     } catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
     finally { setGenerating(false); }
   };
 
+  const generateGlobalKey = async () => {
+    setCreatingGlobal(true);
+    try {
+      const data = await apiCall("generate_global", {
+        label: gkLabel || "Key Global",
+        keyValue: gkKey || undefined,
+        expiresAt: gkExpiry ? new Date(gkExpiry).toISOString() : undefined,
+        maxUses: gkMaxUses ? parseInt(gkMaxUses) : undefined,
+      });
+      if (data.globalKey) {
+        setGlobalKeys(prev => [data.globalKey, ...prev]);
+        toast({ title: "Key Global criada! 🌐", description: `Key: ${data.globalKey.key}` });
+        setGkLabel(""); setGkKey(""); setGkExpiry(""); setGkMaxUses("");
+      }
+    } catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
+    finally { setCreatingGlobal(false); }
+  };
+
   const handleAction = async (action: string, keyId: string, label: string) => {
-    try { await apiCall(action, keyId); toast({ title: `${label} com sucesso!` }); loadKeys(); }
+    try { await apiCall(action, { keyId }); toast({ title: `${label} com sucesso!` }); loadKeys(); }
     catch (e: any) { toast({ title: "Erro", description: e.message, variant: "destructive" }); }
   };
 
@@ -132,14 +167,14 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="students" className="space-y-6">
-          <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="students" className="gap-2"><Users className="h-4 w-4" />Alunos & Turmas</TabsTrigger>
-            <TabsTrigger value="keys" className="gap-2"><Key className="h-4 w-4" />Senhas</TabsTrigger>
+          <TabsList className="grid grid-cols-3 w-full max-w-lg">
+            <TabsTrigger value="students" className="gap-2"><Users className="h-4 w-4" />Alunos</TabsTrigger>
+            <TabsTrigger value="keys" className="gap-2"><Key className="h-4 w-4" />Individuais</TabsTrigger>
+            <TabsTrigger value="global" className="gap-2"><Globe className="h-4 w-4" />Globais</TabsTrigger>
           </TabsList>
 
           {/* Students Tab */}
           <TabsContent value="students" className="space-y-6">
-            {/* Turma Filter */}
             <div className="flex gap-3 items-center flex-wrap">
               <Select value={selectedTurma || "all"} onValueChange={(v) => setSelectedTurma(v === "all" ? "" : v)}>
                 <SelectTrigger className="max-w-72"><SelectValue placeholder="Todas as turmas" /></SelectTrigger>
@@ -151,7 +186,6 @@ const AdminDashboard = () => {
               <Badge variant="outline">{filteredStudents.length} alunos</Badge>
             </div>
 
-            {/* Turma Stats */}
             {turmaStats && (
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {[
@@ -171,11 +205,8 @@ const AdminDashboard = () => {
               </div>
             )}
 
-            {/* Student List */}
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Alunos</CardTitle>
-              </CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-lg">Alunos</CardTitle></CardHeader>
               <CardContent className="space-y-2">
                 {studentsLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Carregando...</div>
@@ -201,40 +232,31 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Student Detail Modal */}
             {selectedStudent && studentDetail && (
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
                 <Card className="border-primary/30">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <User className="h-5 w-5" />
-                        {selectedStudent.display_name}
+                        <User className="h-5 w-5" />{selectedStudent.display_name}
                       </CardTitle>
                       <Button variant="ghost" size="sm" onClick={() => { setSelectedStudent(null); setStudentDetail(null); }}>✕</Button>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <div className="font-bold text-primary">{selectedStudent.xp}</div>
-                        <div className="text-xs text-muted-foreground">XP Total</div>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <div className="font-bold">Nível {selectedStudent.level}</div>
-                        <div className="text-xs text-muted-foreground">Nível</div>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <div className="font-bold">{selectedStudent.streak_days}🔥</div>
-                        <div className="text-xs text-muted-foreground">Sequência</div>
-                      </div>
-                      <div className="text-center p-2 bg-muted rounded-lg">
-                        <div className="font-bold">{selectedStudent.total_study_minutes} min</div>
-                        <div className="text-xs text-muted-foreground">Estudados</div>
-                      </div>
+                      {[
+                        { label: "XP Total", value: selectedStudent.xp },
+                        { label: "Nível", value: `Nível ${selectedStudent.level}` },
+                        { label: "Sequência", value: `${selectedStudent.streak_days}🔥` },
+                        { label: "Estudados", value: `${selectedStudent.total_study_minutes} min` },
+                      ].map(s => (
+                        <div key={s.label} className="text-center p-2 bg-muted rounded-lg">
+                          <div className="font-bold text-primary">{s.value}</div>
+                          <div className="text-xs text-muted-foreground">{s.label}</div>
+                        </div>
+                      ))}
                     </div>
-
-                    {/* Progress by topic */}
                     {studentDetail.progress?.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium mb-2">Progresso por tópico</h4>
@@ -250,8 +272,6 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* Errors */}
                     {studentDetail.errors?.length > 0 && (
                       <div>
                         <h4 className="text-sm font-medium mb-2 text-destructive">Erros ativos: {studentDetail.errors.length}</h4>
@@ -270,7 +290,7 @@ const AdminDashboard = () => {
             )}
           </TabsContent>
 
-          {/* Keys Tab */}
+          {/* Individual Keys Tab */}
           <TabsContent value="keys" className="space-y-6">
             <div className="grid grid-cols-3 gap-3">
               <div className="rounded-xl border border-border bg-card p-4 text-center shadow-sm">
@@ -289,7 +309,7 @@ const AdminDashboard = () => {
 
             <Button onClick={generateKey} disabled={generating} className="w-full" size="lg">
               {generating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-              Gerar Nova Senha
+              Gerar Senha Individual
             </Button>
 
             {loading ? (
@@ -318,9 +338,8 @@ const AdminDashboard = () => {
                     <div className="text-xs text-muted-foreground mb-3">
                       Criada em {new Date(k.created_at).toLocaleDateString("pt-BR")}
                       {k.used_by && ` • Usada por: ${k.used_by}`}
-                      {k.used_at && ` em ${new Date(k.used_at).toLocaleDateString("pt-BR")}`}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
                       {k.blocked ? (
                         <Button size="sm" variant="outline" onClick={() => handleAction("unblock", k.id, "Desbloqueada")}>
                           <Unlock className="h-3 w-3 mr-1" /> Desbloquear
@@ -336,6 +355,87 @@ const AdminDashboard = () => {
                         </Button>
                       )}
                       <Button size="sm" variant="destructive" onClick={() => handleAction("delete", k.id, "Apagada")}>
+                        <Trash2 className="h-3 w-3 mr-1" /> Apagar
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Global Keys Tab */}
+          <TabsContent value="global" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Criar Key Global
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Nome/Label</Label>
+                    <Input placeholder="Ex: Turma 930" value={gkLabel} onChange={e => setGkLabel(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Senha (opcional, gera auto)</Label>
+                    <Input placeholder="Ex: TURMA930" value={gkKey} onChange={e => setGkKey(e.target.value.toUpperCase())} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Expira em</Label>
+                    <Input type="datetime-local" value={gkExpiry} onChange={e => setGkExpiry(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Máximo de usos (vazio = ilimitado)</Label>
+                    <Input type="number" placeholder="Ilimitado" value={gkMaxUses} onChange={e => setGkMaxUses(e.target.value)} />
+                  </div>
+                </div>
+                <Button onClick={generateGlobalKey} disabled={creatingGlobal} className="w-full">
+                  {creatingGlobal ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Globe className="h-4 w-4 mr-2" />}
+                  Criar Key Global
+                </Button>
+              </CardContent>
+            </Card>
+
+            {globalKeys.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Globe className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Nenhuma key global criada.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {globalKeys.map((gk) => (
+                  <motion.div key={gk.id} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                    className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <code className="text-lg font-bold font-mono text-foreground">{gk.key}</code>
+                        <button onClick={() => copyKey(gk.key)} className="text-muted-foreground hover:text-foreground">
+                          {copiedKey === gk.key ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <Badge variant={gk.active ? "default" : "destructive"}>
+                        {gk.active ? "Ativa" : "Desativada"}
+                      </Badge>
+                    </div>
+                    <div className="text-sm font-medium">{gk.label}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-3 mt-1 flex-wrap">
+                      <span className="flex items-center gap-1"><Hash className="h-3 w-3" />{gk.current_uses} usos{gk.max_uses ? ` / ${gk.max_uses}` : ""}</span>
+                      {gk.expires_at && (
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          Expira: {new Date(gk.expires_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex gap-2 mt-3">
+                      <Button size="sm" variant="outline" onClick={() => handleAction("toggle_global", gk.id, gk.active ? "Desativada" : "Ativada")}>
+                        {gk.active ? <ToggleRight className="h-3 w-3 mr-1" /> : <ToggleLeft className="h-3 w-3 mr-1" />}
+                        {gk.active ? "Desativar" : "Ativar"}
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleAction("delete_global", gk.id, "Apagada")}>
                         <Trash2 className="h-3 w-3 mr-1" /> Apagar
                       </Button>
                     </div>

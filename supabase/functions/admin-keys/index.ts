@@ -22,9 +22,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { action, adminKey, keyId } = await req.json();
+    const body = await req.json();
+    const { action, adminKey, keyId, label, expiresAt, maxUses, keyValue } = body;
 
-    // Verify admin
     if (adminKey !== ADMIN_PASSWORD) {
       return new Response(JSON.stringify({ error: "Acesso negado" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -37,36 +37,61 @@ serve(async (req) => {
 
     switch (action) {
       case "list": {
-        const { data, error } = await sb
-          .from("access_keys")
-          .select("*")
-          .order("created_at", { ascending: false });
-        if (error) throw error;
-        return new Response(JSON.stringify({ keys: data }), {
+        const { data: keys } = await sb.from("access_keys").select("*").order("created_at", { ascending: false });
+        const { data: globalKeys } = await sb.from("global_keys").select("*").order("created_at", { ascending: false });
+        return new Response(JSON.stringify({ keys: keys || [], globalKeys: globalKeys || [] }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       case "generate": {
         const newKey = generateKey();
-        const { data, error } = await sb
-          .from("access_keys")
+        const { data, error } = await sb.from("access_keys")
           .insert({ key: newKey, created_by: "Pablo Martins Santana" })
-          .select()
-          .single();
+          .select().single();
         if (error) throw error;
         return new Response(JSON.stringify({ key: data }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
+      case "generate_global": {
+        const gKey = keyValue || generateKey(10);
+        const insert: any = {
+          key: gKey,
+          label: label || "Key Global",
+          created_by: "Pablo Martins Santana",
+        };
+        if (expiresAt) insert.expires_at = expiresAt;
+        if (maxUses) insert.max_uses = maxUses;
+        const { data, error } = await sb.from("global_keys").insert(insert).select().single();
+        if (error) throw error;
+        return new Response(JSON.stringify({ globalKey: data }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "toggle_global": {
+        if (!keyId) throw new Error("keyId required");
+        const { data: existing } = await sb.from("global_keys").select("active").eq("id", keyId).single();
+        if (!existing) throw new Error("Key not found");
+        await sb.from("global_keys").update({ active: !existing.active }).eq("id", keyId);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      case "delete_global": {
+        if (!keyId) throw new Error("keyId required");
+        await sb.from("global_keys").delete().eq("id", keyId);
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       case "block": {
         if (!keyId) throw new Error("keyId required");
-        const { error } = await sb
-          .from("access_keys")
-          .update({ blocked: true })
-          .eq("id", keyId);
-        if (error) throw error;
+        await sb.from("access_keys").update({ blocked: true }).eq("id", keyId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -74,11 +99,7 @@ serve(async (req) => {
 
       case "unblock": {
         if (!keyId) throw new Error("keyId required");
-        const { error } = await sb
-          .from("access_keys")
-          .update({ blocked: false })
-          .eq("id", keyId);
-        if (error) throw error;
+        await sb.from("access_keys").update({ blocked: false }).eq("id", keyId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -86,11 +107,7 @@ serve(async (req) => {
 
       case "delete": {
         if (!keyId) throw new Error("keyId required");
-        const { error } = await sb
-          .from("access_keys")
-          .delete()
-          .eq("id", keyId);
-        if (error) throw error;
+        await sb.from("access_keys").delete().eq("id", keyId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -98,11 +115,7 @@ serve(async (req) => {
 
       case "reset": {
         if (!keyId) throw new Error("keyId required");
-        const { error } = await sb
-          .from("access_keys")
-          .update({ used: false, used_at: null, used_by: null })
-          .eq("id", keyId);
-        if (error) throw error;
+        await sb.from("access_keys").update({ used: false, used_at: null, used_by: null }).eq("id", keyId);
         return new Response(JSON.stringify({ success: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
