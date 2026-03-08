@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
-import { useProfile, useBrainMap, useDailyMissions, useErrors, useBadges, useUserKey, getGradePrediction, updateProfile, BadgeData } from "@/hooks/useGamification";
+import { useProfile, useBrainMap, useDailyMissions, useErrors, useBadges, useUserKey, useNotifications, getGradePrediction, updateProfile, openDailyChest, BadgeData } from "@/hooks/useGamification";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Flame, Trophy, Brain, Target, Zap, BookOpen, Swords, Timer, TrendingUp, AlertTriangle, Sparkles, GraduationCap, Pencil, Check, X, Users, School, Award, Bell } from "lucide-react";
+import { Flame, Trophy, Brain, Target, Zap, BookOpen, Swords, Timer, TrendingUp, AlertTriangle, Sparkles, GraduationCap, Pencil, Check, X, Users, School, Award, Bell, Gift, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TURMAS, ALL_SUBJECTS } from "@/lib/constants";
 
@@ -32,12 +32,21 @@ function totalXpForLevel(level: number): number {
   return total;
 }
 
+const RARITY_COLORS: Record<string, string> = {
+  legendary: "from-yellow-400 to-amber-600",
+  epic: "from-purple-500 to-violet-600",
+  rare: "from-blue-400 to-cyan-500",
+  uncommon: "from-green-400 to-emerald-500",
+  common: "from-gray-300 to-gray-400",
+};
+
 export default function StudentDashboard() {
   const { profile, loading: profileLoading, refresh, setProfile } = useProfile();
   const { topics: brainTopics, loading: brainLoading } = useBrainMap();
   const { missions, loading: missionsLoading } = useDailyMissions();
   const { errors, loading: errorsLoading } = useErrors();
   const { badges, loading: badgesLoading } = useBadges();
+  const { notifications, refresh: refreshNotifs } = useNotifications();
   const userKey = useUserKey();
   const { toast } = useToast();
   const [predictions, setPredictions] = useState<any[]>([]);
@@ -45,6 +54,12 @@ export default function StudentDashboard() {
   const [newName, setNewName] = useState("");
   const [editingTurma, setEditingTurma] = useState(false);
   const [showAllBadges, setShowAllBadges] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
+  // Chest state
+  const [chestOpen, setChestOpen] = useState(false);
+  const [chestResult, setChestResult] = useState<any>(null);
+  const [chestLoading, setChestLoading] = useState(false);
+  const [chestAnimation, setChestAnimation] = useState(false);
 
   useEffect(() => {
     if (userKey) {
@@ -76,6 +91,28 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleOpenChest = async () => {
+    if (!userKey || chestLoading) return;
+    setChestLoading(true);
+    setChestAnimation(true);
+    try {
+      // Animate for 1.5s
+      await new Promise(r => setTimeout(r, 1500));
+      const res = await openDailyChest(userKey);
+      setChestResult(res);
+      if (!res.already_opened) {
+        refresh(); // refresh profile XP
+        refreshNotifs();
+        toast({ title: res.message || `+${res.xp} XP do baú!` });
+      }
+    } catch (e) {
+      toast({ title: "Erro ao abrir baú", variant: "destructive" });
+    } finally {
+      setChestLoading(false);
+      setChestAnimation(false);
+    }
+  };
+
   if (profileLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -95,8 +132,9 @@ export default function StudentDashboard() {
   const completedMissions = (missionsList as any[]).filter((m: any) => m.current >= m.target).length;
 
   const strongTopics = brainTopics.filter(t => t.mastery_percent >= 80);
+  const hasChestNotif = notifications.some(n => n.type === "chest");
+  const unreadNotifs = notifications.length;
 
-  // All possible badges for display
   const ALL_BADGES = [
     { id: "first_correct", name: "Primeiro Acerto", icon: "✅", desc: "Acertar a primeira questão" },
     { id: "xp_100", name: "Centurião", icon: "💯", desc: "Alcançar 100 XP" },
@@ -117,7 +155,9 @@ export default function StudentDashboard() {
     { id: "study_60min", name: "Hora de Estudo", icon: "⏰", desc: "60 min estudados" },
     { id: "study_300min", name: "Maratonista", icon: "🏃", desc: "5 horas estudadas" },
     { id: "errors_resolved_10", name: "Aprendiz", icon: "🔄", desc: "Resolver 10 erros" },
-    { id: "mastery_topic", name: "Especialista", icon: "⭐", desc: "Dominar um tópico (90%+)" },
+    { id: "mastery_topic", name: "Especialista", icon: "⭐", desc: "Dominar tópico (90%+)" },
+    { id: "daily_chest_3", name: "Colecionador", icon: "🎁", desc: "Abrir 3 baús" },
+    { id: "daily_chest_7", name: "Sortudo", icon: "🍀", desc: "Abrir 7 baús" },
   ];
 
   const earnedIds = new Set(badges.map(b => b.badge_id));
@@ -125,14 +165,14 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="container mx-auto p-4 md:p-6 space-y-6">
+      <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 max-w-5xl">
         {/* Profile Banner */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold shrink-0">
+          <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border-primary/20 overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0 w-full">
+                  <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xl sm:text-2xl font-bold shrink-0">
                     {profile?.display_name?.[0] || "E"}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -145,31 +185,30 @@ export default function StudentDashboard() {
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold truncate">{profile?.display_name}</h1>
+                        <h1 className="text-lg sm:text-2xl font-bold truncate">{profile?.display_name}</h1>
                         <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={() => { setEditingName(true); setNewName(profile?.display_name || ""); }}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     )}
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      <Badge variant="secondary" className="gap-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
+                      <Badge variant="secondary" className="gap-1 text-[10px] sm:text-xs">
                         <GraduationCap className="h-3 w-3" />
-                        Nível {profile?.level} — {getLevelName(profile?.level || 1)}
+                        Nv. {profile?.level} — {getLevelName(profile?.level || 1)}
                       </Badge>
                       {(profile?.streak_days || 0) > 0 && (
-                        <Badge variant="destructive" className="gap-1 animate-pulse">
+                        <Badge variant="destructive" className="gap-1 animate-pulse text-[10px] sm:text-xs">
                           <Flame className="h-3 w-3" />
-                          {profile?.streak_days} dias 🔥
+                          {profile?.streak_days} 🔥
                         </Badge>
                       )}
                     </div>
-                    {/* Turma */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       {editingTurma ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           <Select value={profile?.turma || ""} onValueChange={handleSaveTurma}>
-                            <SelectTrigger className="h-7 text-xs max-w-64"><SelectValue placeholder="Selecionar turma" /></SelectTrigger>
+                            <SelectTrigger className="h-7 text-[10px] sm:text-xs max-w-56"><SelectValue placeholder="Selecionar turma" /></SelectTrigger>
                             <SelectContent>
                               {TURMAS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                             </SelectContent>
@@ -177,46 +216,142 @@ export default function StudentDashboard() {
                           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingTurma(false)}><X className="h-3 w-3" /></Button>
                         </div>
                       ) : (
-                        <button onClick={() => setEditingTurma(true)} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                        <button onClick={() => setEditingTurma(true)} className="text-xs text-muted-foreground hover:text-foreground transition-colors truncate">
                           {profile?.turma || "📝 Selecionar turma"}
                         </button>
                       )}
                     </div>
                   </div>
                 </div>
-                <div className="text-right shrink-0">
-                  <div className="text-3xl font-bold text-primary">{profile?.xp?.toLocaleString()} XP</div>
-                  <div className="text-sm text-muted-foreground">{profile?.total_study_minutes || 0} min estudados</div>
+                <div className="flex items-center gap-3 sm:gap-0 sm:flex-col sm:items-end shrink-0 w-full sm:w-auto justify-between">
+                  <div className="text-right">
+                    <div className="text-xl sm:text-3xl font-bold text-primary">{profile?.xp?.toLocaleString()} XP</div>
+                    <div className="text-[10px] sm:text-sm text-muted-foreground">{profile?.total_study_minutes || 0} min estudados</div>
+                  </div>
+                  {/* Notification bell */}
+                  <div className="relative">
+                    <Button size="icon" variant="ghost" className="h-9 w-9 relative" onClick={() => setShowNotifs(!showNotifs)}>
+                      <Bell className="h-5 w-5" />
+                      {unreadNotifs > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground rounded-full text-[9px] flex items-center justify-center font-bold">
+                          {unreadNotifs}
+                        </span>
+                      )}
+                    </Button>
+                    <AnimatePresence>
+                      {showNotifs && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.9, y: -5 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, y: -5 }}
+                          className="absolute right-0 top-11 w-72 sm:w-80 bg-card border border-border rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto"
+                        >
+                          <div className="p-3 border-b border-border">
+                            <span className="text-sm font-semibold">Notificações</span>
+                          </div>
+                          {notifications.length === 0 ? (
+                            <div className="p-4 text-sm text-muted-foreground text-center">Tudo em dia! ✅</div>
+                          ) : (
+                            <div className="divide-y divide-border">
+                              {notifications.map((n, i) => (
+                                <div key={i} className="p-3 flex items-start gap-2.5 hover:bg-muted/50 transition-colors">
+                                  <span className="text-lg shrink-0">{n.icon}</span>
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium">{n.title}</div>
+                                    <div className="text-xs text-muted-foreground">{n.desc}</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
-              <div className="mt-4">
-                <div className="flex justify-between text-sm mb-1">
+              <div className="mt-3 sm:mt-4">
+                <div className="flex justify-between text-xs sm:text-sm mb-1">
                   <span>Progresso para nível {(profile?.level || 1) + 1}</span>
                   <span>{xpInCurrentLevel}/{xpNeeded} XP</span>
                 </div>
-                <Progress value={xpProgress} className="h-3" />
+                <Progress value={xpProgress} className="h-2.5 sm:h-3" />
               </div>
             </CardContent>
           </Card>
         </motion.div>
 
+        {/* Daily Chest */}
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }}>
+          <Card className={`border-2 transition-all ${hasChestNotif ? "border-yellow-500/50 bg-gradient-to-r from-yellow-500/5 to-amber-500/5" : "border-border"}`}>
+            <CardContent className="p-4 sm:p-5">
+              {chestResult && !chestResult.already_opened ? (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-center py-2"
+                >
+                  <div className={`inline-block rounded-2xl px-6 py-3 bg-gradient-to-r ${RARITY_COLORS[chestResult.rarity] || RARITY_COLORS.common}`}>
+                    <div className="text-3xl sm:text-4xl mb-1">✨</div>
+                    <div className="text-white font-bold text-lg sm:text-xl">+{chestResult.xp} XP</div>
+                    <div className="text-white/80 text-xs sm:text-sm capitalize">{chestResult.rarity}</div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">{chestResult.message}</p>
+                  <Button variant="ghost" size="sm" className="mt-2" onClick={() => setChestResult(null)}>Fechar</Button>
+                </motion.div>
+              ) : chestResult?.already_opened ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl grayscale opacity-50">🎁</span>
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Baú já aberto hoje</div>
+                    <div className="text-xs text-muted-foreground">Volte amanhã para mais recompensas!</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <motion.span
+                      animate={chestAnimation ? { rotate: [0, -10, 10, -10, 10, 0], scale: [1, 1.1, 1] } : {}}
+                      transition={{ duration: 0.5, repeat: chestAnimation ? Infinity : 0 }}
+                      className="text-3xl sm:text-4xl cursor-pointer"
+                    >
+                      🎁
+                    </motion.span>
+                    <div className="min-w-0">
+                      <div className="text-sm sm:text-base font-bold">Baú Diário</div>
+                      <div className="text-xs text-muted-foreground">Abra e ganhe XP surpresa!</div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleOpenChest}
+                    disabled={chestLoading}
+                    className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shrink-0 shadow-lg"
+                  >
+                    <Gift className="h-4 w-4 mr-1.5" />
+                    {chestLoading ? "Abrindo..." : "Abrir Baú"}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 gap-2 sm:gap-3">
           {[
-            { icon: Zap, label: "Desafio 30s", desc: "Raciocínio rápido", href: "/challenge30", color: "text-yellow-500" },
-            { icon: Swords, label: "Batalha", desc: "PvP", href: "/battle", color: "text-red-500" },
-            { icon: Target, label: "Simulado", desc: "Modo prova", href: "/simulator", color: "text-blue-500" },
-            { icon: AlertTriangle, label: "Lab Erros", desc: "Revisar erros", href: "/error-lab", color: "text-orange-500" },
-            { icon: Bell, label: "Provas", desc: "Radar & Revisão", href: "/exam-alert", color: "text-orange-500" },
-            { icon: Brain, label: "Lab Mental", desc: "Treino cerebral", href: "/mental-lab", color: "text-pink-500" },
+            { icon: Zap, label: "Desafio 30s", href: "/challenge30", color: "text-yellow-500" },
+            { icon: Swords, label: "Batalha", href: "/battle", color: "text-red-500" },
+            { icon: Target, label: "Simulado", href: "/simulator", color: "text-blue-500" },
+            { icon: AlertTriangle, label: "Provas", href: "/exam-alert", color: "text-orange-500" },
+            { icon: Brain, label: "Lab Mental", href: "/mental-lab", color: "text-pink-500" },
+            { icon: BookOpen, label: "Aulas", href: "/", color: "text-green-500" },
           ].map((action, i) => (
-            <motion.div key={action.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+            <motion.div key={action.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
               <Link to={action.href}>
-                <Card className="hover:border-primary/50 transition-all cursor-pointer group">
-                  <CardContent className="p-3 flex flex-col items-center gap-1 text-center">
-                    <action.icon className={`h-6 w-6 ${action.color} group-hover:scale-110 transition-transform`} />
-                    <span className="text-xs font-medium">{action.label}</span>
-                    <span className="text-[10px] text-muted-foreground">{action.desc}</span>
+                <Card className="hover:border-primary/50 transition-all cursor-pointer group h-full">
+                  <CardContent className="p-2.5 sm:p-3 flex flex-col items-center gap-0.5 sm:gap-1 text-center">
+                    <action.icon className={`h-5 w-5 sm:h-6 sm:w-6 ${action.color} group-hover:scale-110 transition-transform`} />
+                    <span className="text-[10px] sm:text-xs font-medium leading-tight">{action.label}</span>
                   </CardContent>
                 </Card>
               </Link>
@@ -224,30 +359,30 @@ export default function StudentDashboard() {
           ))}
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Badges / Conquistas */}
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+          {/* Badges */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
             <Card className="border-yellow-500/20">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <Award className="h-5 w-5 text-yellow-500" />
                   Conquistas
-                  <Badge variant="outline" className="ml-auto">{badges.length}/{ALL_BADGES.length}</Badge>
+                  <Badge variant="outline" className="ml-auto text-[10px] sm:text-xs">{badges.length}/{ALL_BADGES.length}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                   {(showAllBadges ? ALL_BADGES : ALL_BADGES.slice(0, 10)).map(b => {
                     const earned = earnedIds.has(b.id);
                     return (
                       <motion.div
                         key={b.id}
                         whileHover={{ scale: 1.1 }}
-                        className={`flex flex-col items-center gap-0.5 p-2 rounded-lg text-center cursor-default transition-all ${earned ? "bg-yellow-500/10" : "bg-muted/30 opacity-40 grayscale"}`}
+                        className={`flex flex-col items-center gap-0.5 p-1.5 sm:p-2 rounded-lg text-center cursor-default transition-all ${earned ? "bg-yellow-500/10 ring-1 ring-yellow-500/20" : "bg-muted/30 opacity-40 grayscale"}`}
                         title={`${b.name}: ${b.desc}`}
                       >
-                        <span className="text-2xl">{b.icon}</span>
-                        <span className="text-[9px] font-medium leading-tight">{b.name}</span>
+                        <span className="text-xl sm:text-2xl">{b.icon}</span>
+                        <span className="text-[8px] sm:text-[9px] font-medium leading-tight">{b.name}</span>
                       </motion.div>
                     );
                   })}
@@ -264,26 +399,26 @@ export default function StudentDashboard() {
           {/* Daily Missions */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <Target className="h-5 w-5 text-primary" />
                   Missões do Dia
-                  <Badge variant="outline" className="ml-auto">{completedMissions}/{(missionsList as any[]).length}</Badge>
+                  <Badge variant="outline" className="ml-auto text-[10px] sm:text-xs">{completedMissions}/{(missionsList as any[]).filter((m: any) => m.type !== "chest").length}</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2.5 sm:space-y-3">
                 {missionsLoading ? (
                   <div className="text-muted-foreground text-sm">Carregando...</div>
-                ) : (missionsList as any[]).map((m: any, i: number) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs ${m.current >= m.target ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"}`}>
+                ) : (missionsList as any[]).filter((m: any) => m.type !== "chest").map((m: any, i: number) => (
+                  <div key={i} className="flex items-center gap-2.5 sm:gap-3">
+                    <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs shrink-0 ${m.current >= m.target ? "bg-green-500 text-white" : "bg-muted text-muted-foreground"}`}>
                       {m.current >= m.target ? "✓" : i + 1}
                     </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium">{m.title}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs sm:text-sm font-medium truncate">{m.title}</div>
                       <Progress value={Math.min(100, (m.current / m.target) * 100)} className="h-1.5 mt-1" />
                     </div>
-                    <Badge variant="secondary" className="text-xs">+{m.xp} XP</Badge>
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs shrink-0">+{m.xp} XP</Badge>
                   </div>
                 ))}
               </CardContent>
@@ -293,8 +428,8 @@ export default function StudentDashboard() {
           {/* Brain Map */}
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.15 }}>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <Brain className="h-5 w-5 text-purple-500" />
                   Mapa do Cérebro
                 </CardTitle>
@@ -310,19 +445,19 @@ export default function StudentDashboard() {
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {brainTopics.slice(0, 10).map((t: any, i: number) => (
                       <div key={i} className="flex items-center gap-2">
-                        <span className="text-lg">
+                        <span className="text-base sm:text-lg">
                           {t.mastery_percent >= 70 ? "🟢" : t.mastery_percent >= 40 ? "🟡" : "🔴"}
                         </span>
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm truncate">
+                          <div className="text-xs sm:text-sm truncate">
                             {t.topic}
-                            <span className="text-xs text-muted-foreground ml-1">
+                            <span className="text-[10px] sm:text-xs text-muted-foreground ml-1">
                               ({ALL_SUBJECTS.find(s => s.id === t.subject)?.name || t.subject})
                             </span>
                           </div>
                           <Progress value={t.mastery_percent} className="h-1.5" />
                         </div>
-                        <span className="text-xs text-muted-foreground">{t.mastery_percent}%</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground shrink-0">{t.mastery_percent}%</span>
                       </div>
                     ))}
                   </div>
@@ -335,8 +470,8 @@ export default function StudentDashboard() {
           {strongTopics.length > 0 && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
               <Card className="border-yellow-500/30 bg-yellow-500/5">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-lg">
+                <CardHeader className="pb-2 sm:pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                     <Sparkles className="h-5 w-5 text-yellow-500" />
                     Talentos Detectados
                   </CardTitle>
@@ -346,8 +481,8 @@ export default function StudentDashboard() {
                     {strongTopics.slice(0, 5).map((t: any, i: number) => (
                       <div key={i} className="flex items-center gap-2">
                         <span>⭐</span>
-                        <span className="text-sm font-medium">{t.topic}</span>
-                        <Badge variant="outline" className="ml-auto text-xs">{t.mastery_percent}%</Badge>
+                        <span className="text-xs sm:text-sm font-medium truncate">{t.topic}</span>
+                        <Badge variant="outline" className="ml-auto text-[10px] sm:text-xs shrink-0">{t.mastery_percent}%</Badge>
                       </div>
                     ))}
                   </div>
@@ -359,8 +494,8 @@ export default function StudentDashboard() {
           {/* Grade Prediction */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <TrendingUp className="h-5 w-5 text-green-500" />
                   Previsão de Nota
                 </CardTitle>
@@ -371,11 +506,11 @@ export default function StudentDashboard() {
                     Resolva exercícios para ver sua previsão! 📊
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2.5 sm:space-y-3">
                     {predictions.map((p: any, i: number) => (
                       <div key={i} className="flex items-center justify-between">
-                        <span className="text-sm font-medium">{ALL_SUBJECTS.find(s => s.id === p.subject)?.name || p.subject}</span>
-                        <span className={`text-lg font-bold ${p.predicted_grade >= 7 ? "text-green-500" : p.predicted_grade >= 5 ? "text-yellow-500" : "text-red-500"}`}>
+                        <span className="text-xs sm:text-sm font-medium">{ALL_SUBJECTS.find(s => s.id === p.subject)?.name || p.subject}</span>
+                        <span className={`text-base sm:text-lg font-bold ${p.predicted_grade >= 7 ? "text-green-500" : p.predicted_grade >= 5 ? "text-yellow-500" : "text-red-500"}`}>
                           {p.predicted_grade.toFixed(1)}
                         </span>
                       </div>
@@ -389,11 +524,11 @@ export default function StudentDashboard() {
           {/* Error Lab Preview */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-lg">
+              <CardHeader className="pb-2 sm:pb-3">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                   <AlertTriangle className="h-5 w-5 text-orange-500" />
                   Erros Frequentes
-                  {errors.length > 0 && <Badge variant="destructive" className="ml-auto">{errors.length}</Badge>}
+                  {errors.length > 0 && <Badge variant="destructive" className="ml-auto text-[10px] sm:text-xs">{errors.length}</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -406,16 +541,16 @@ export default function StudentDashboard() {
                 ) : (
                   <div className="space-y-2">
                     {errors.slice(0, 4).map((e: any, i: number) => (
-                      <div key={i} className="text-sm p-2 rounded-lg bg-destructive/5 border border-destructive/10">
+                      <div key={i} className="text-xs sm:text-sm p-2 rounded-lg bg-destructive/5 border border-destructive/10">
                         <div className="font-medium truncate">{e.question_text}</div>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-[10px] sm:text-xs text-muted-foreground mt-1">
                           {ALL_SUBJECTS.find(s => s.id === e.subject)?.name || e.subject} • Errou {e.error_count}x
                         </div>
                       </div>
                     ))}
                     {errors.length > 4 && (
                       <Link to="/error-lab">
-                        <Button variant="outline" size="sm" className="w-full">Ver todos os erros</Button>
+                        <Button variant="outline" size="sm" className="w-full text-xs">Ver todos os erros</Button>
                       </Link>
                     )}
                   </div>
@@ -425,21 +560,21 @@ export default function StudentDashboard() {
           </motion.div>
         </div>
 
-        {/* Bottom navigation */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Bottom nav */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
           {[
             { icon: Trophy, label: "Ranking", desc: "Classificação", href: "/ranking", color: "text-yellow-500" },
             { icon: Sparkles, label: "Estudo Auto", desc: "IA escolhe", href: "/auto-study", color: "text-purple-500" },
-            { icon: School, label: "Mapa da Escola", desc: "Inteligência coletiva", href: "/school-map", color: "text-blue-500" },
-            { icon: BookOpen, label: "Aulas", desc: "Conteúdo", href: "/", color: "text-green-500" },
+            { icon: School, label: "Mapa Escola", desc: "Coletivo", href: "/school-map", color: "text-blue-500" },
+            { icon: Timer, label: "Modo Foco", desc: "Concentração", href: "/focus", color: "text-green-500" },
           ].map((item) => (
             <Link key={item.label} to={item.href}>
-              <Card className="hover:border-primary/30 transition-all cursor-pointer">
-                <CardContent className="p-3 flex items-center gap-3">
-                  <item.icon className={`h-5 w-5 ${item.color}`} />
-                  <div>
-                    <span className="text-sm font-medium block">{item.label}</span>
-                    <span className="text-xs text-muted-foreground">{item.desc}</span>
+              <Card className="hover:border-primary/30 transition-all cursor-pointer h-full">
+                <CardContent className="p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3">
+                  <item.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${item.color} shrink-0`} />
+                  <div className="min-w-0">
+                    <span className="text-xs sm:text-sm font-medium block truncate">{item.label}</span>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">{item.desc}</span>
                   </div>
                 </CardContent>
               </Card>

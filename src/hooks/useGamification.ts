@@ -65,7 +65,6 @@ export function useProfile() {
   }, [userKey, name]);
 
   useEffect(() => { refresh(); }, [refresh]);
-
   return { profile, loading, refresh, setProfile };
 }
 
@@ -135,6 +134,31 @@ export function useDailyMissions() {
   }, [userKey]);
 
   return { missions, loading };
+}
+
+export function useNotifications() {
+  const userKey = useUserKey();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(async () => {
+    if (!userKey) return;
+    try {
+      const res = await callGamification("get_notifications", { user_key: userKey });
+      setNotifications(res.notifications || []);
+    } catch (e) {
+      console.error("Notifications error:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [userKey]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+  return { notifications, loading, refresh };
+}
+
+export async function openDailyChest(userKey: string) {
+  return callGamification("open_daily_chest", { user_key: userKey });
 }
 
 export async function recordAnswer(userKey: string, data: {

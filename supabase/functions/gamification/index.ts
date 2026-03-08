@@ -26,7 +26,6 @@ function calculateLevel(xp: number): number {
   }
 }
 
-// Badge definitions
 const BADGE_DEFS: Record<string, { name: string; icon: string; description: string }> = {
   first_correct: { name: "Primeiro Acerto", icon: "✅", description: "Acertou a primeira questão" },
   xp_100: { name: "Centurião", icon: "💯", description: "Alcançou 100 XP" },
@@ -48,6 +47,8 @@ const BADGE_DEFS: Record<string, { name: string; icon: string; description: stri
   study_300min: { name: "Maratonista", icon: "🏃", description: "Estudou 5 horas no total" },
   errors_resolved_10: { name: "Aprendiz", icon: "🔄", description: "Resolveu 10 erros" },
   mastery_topic: { name: "Especialista", icon: "⭐", description: "Dominou um tópico (90%+)" },
+  daily_chest_3: { name: "Colecionador", icon: "🎁", description: "Abriu 3 baús diários" },
+  daily_chest_7: { name: "Sortudo", icon: "🍀", description: "Abriu 7 baús diários" },
 };
 
 async function checkAndAwardBadges(sb: any, userKey: string, context?: Record<string, any>) {
@@ -59,10 +60,13 @@ async function checkAndAwardBadges(sb: any, userKey: string, context?: Record<st
     if (has.has(id)) return;
     const def = BADGE_DEFS[id];
     if (!def) return;
-    const { error } = await sb.from("student_badges").upsert(
-      { user_key: userKey, badge_id: id, badge_name: def.name, badge_icon: def.icon, badge_description: def.description },
-      { onConflict: "user_key,badge_id", ignoreDuplicates: true }
-    );
+    // Use select to check first, then insert - avoids upsert issues
+    const { data: check } = await sb.from("student_badges")
+      .select("id").eq("user_key", userKey).eq("badge_id", id).maybeSingle();
+    if (check) { has.add(id); return; }
+    const { error } = await sb.from("student_badges").insert({
+      user_key: userKey, badge_id: id, badge_name: def.name, badge_icon: def.icon, badge_description: def.description
+    });
     if (!error) {
       awarded.push(id);
       has.add(id);
@@ -72,42 +76,33 @@ async function checkAndAwardBadges(sb: any, userKey: string, context?: Record<st
   const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", userKey).maybeSingle();
   if (!profile) return awarded;
 
-  // XP milestones
   if (profile.xp >= 100) await award("xp_100");
   if (profile.xp >= 500) await award("xp_500");
   if (profile.xp >= 1000) await award("xp_1000");
   if (profile.xp >= 5000) await award("xp_5000");
-
-  // Level milestones
   if (profile.level >= 5) await award("level_5");
   if (profile.level >= 10) await award("level_10");
   if (profile.level >= 20) await award("level_20");
-
-  // Streak milestones
   if (profile.streak_days >= 3) await award("streak_3");
   if (profile.streak_days >= 7) await award("streak_7");
   if (profile.streak_days >= 30) await award("streak_30");
-
-  // Study time
   if (profile.total_study_minutes >= 60) await award("study_60min");
   if (profile.total_study_minutes >= 300) await award("study_300min");
 
-  // Context-specific badges
   if (context?.first_correct) await award("first_correct");
   if (context?.battle_won) await award("battle_won");
   if (context?.first_battle) await award("first_battle");
   if (context?.perfect_sim) await award("perfect_sim");
   if (context?.challenge30_score && context.challenge30_score >= 10) await award("challenge30_10");
+  if (context?.chest_count && context.chest_count >= 3) await award("daily_chest_3");
+  if (context?.chest_count && context.chest_count >= 7) await award("daily_chest_7");
 
-  // Check battle wins count
   const { count: battleWins } = await sb.from("battle_challenges").select("*", { count: "exact", head: true }).eq("winner_key", userKey);
   if (battleWins && battleWins >= 5) await award("battle_5");
 
-  // Check resolved errors
   const { count: resolvedCount } = await sb.from("student_errors").select("*", { count: "exact", head: true }).eq("user_key", userKey).eq("resolved", true);
   if (resolvedCount && resolvedCount >= 10) await award("errors_resolved_10");
 
-  // Check mastery
   const { data: mastered } = await sb.from("student_topic_progress").select("id").eq("user_key", userKey).gte("mastery_percent", 90).limit(1);
   if (mastered && mastered.length > 0) await award("mastery_topic");
 
@@ -119,6 +114,16 @@ function json(data: any, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// Daily chest XP rewards with rarities
+function generateChestReward(): { xp: number; rarity: string; message: string } {
+  const roll = Math.random();
+  if (roll < 0.05) return { xp: 200, rarity: "legendary", message: "🏆 LENDÁRIO! Você encontrou 200 XP!" };
+  if (roll < 0.20) return { xp: 100, rarity: "epic", message: "💜 ÉPICO! 100 XP no baú!" };
+  if (roll < 0.45) return { xp: 50, rarity: "rare", message: "💙 RARO! 50 XP de recompensa!" };
+  if (roll < 0.75) return { xp: 30, rarity: "uncommon", message: "💚 INCOMUM! 30 XP encontrados!" };
+  return { xp: 15, rarity: "common", message: "🤍 15 XP no baú de hoje!" };
 }
 
 serve(async (req) => {
@@ -158,7 +163,6 @@ serve(async (req) => {
           data.streak_days = 1;
           data.last_study_date = today;
         }
-        // Check badges
         const newBadges = await checkAndAwardBadges(sb, user_key);
         return json({ profile: data, new_badges: newBadges });
       }
@@ -185,9 +189,104 @@ serve(async (req) => {
         const badgeCtx: any = {};
         if (reason === "challenge_30s" && amount) badgeCtx.challenge30_score = Math.floor((amount - 10) / 15);
         if (reason === "simulado_perfeito") badgeCtx.perfect_sim = true;
+        if (reason === "daily_chest") badgeCtx.chest_opened = true;
         const newBadges = await checkAndAwardBadges(sb, user_key, badgeCtx);
         
         return json({ xp: newXp, level: newLevel, leveled_up: leveledUp, xp_added: amount || 10, new_badges: newBadges });
+      }
+
+      case "open_daily_chest": {
+        const { user_key } = params;
+        // Check if chest already opened today using localStorage key (stored server-side via daily_missions or a simple check)
+        const today = new Date().toISOString().split("T")[0];
+        
+        // Use daily_missions to track chest status
+        const { data: mission } = await sb.from("daily_missions").select("*").eq("user_key", user_key).eq("mission_date", today).maybeSingle();
+        
+        // Check if chest_opened flag is set in missions data
+        const missionData = mission?.missions as any[];
+        const chestOpened = missionData?.some((m: any) => m.type === "chest" && m.current >= m.target);
+        
+        if (chestOpened) {
+          return json({ already_opened: true, message: "Você já abriu o baú hoje! Volte amanhã 🕐" });
+        }
+
+        const reward = generateChestReward();
+        
+        // Add XP
+        const { data: profile } = await sb.from("student_profiles").select("xp, level").eq("user_key", user_key).single();
+        if (profile) {
+          const newXp = profile.xp + reward.xp;
+          const newLevel = calculateLevel(newXp);
+          await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
+        }
+
+        // Mark chest as opened in missions
+        if (mission && missionData) {
+          const updated = [...missionData, { id: "chest", title: "Baú aberto", target: 1, current: 1, type: "chest", xp: reward.xp }];
+          await sb.from("daily_missions").update({ missions: updated }).eq("id", mission.id);
+        }
+
+        // Count total chests opened (count missions that have chest type)
+        const { data: allMissions } = await sb.from("daily_missions").select("missions").eq("user_key", user_key);
+        let chestCount = 0;
+        for (const m of (allMissions || [])) {
+          if ((m.missions as any[])?.some((mi: any) => mi.type === "chest")) chestCount++;
+        }
+        
+        const newBadges = await checkAndAwardBadges(sb, user_key, { chest_count: chestCount });
+
+        return json({ ...reward, already_opened: false, new_badges: newBadges });
+      }
+
+      case "get_notifications": {
+        const { user_key } = params;
+        const notifications: any[] = [];
+        
+        // Check streak
+        const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", user_key).maybeSingle();
+        if (profile) {
+          if (profile.streak_days >= 3) {
+            notifications.push({ type: "streak", icon: "🔥", title: `${profile.streak_days} dias seguidos!`, desc: "Continue assim!", priority: 1 });
+          }
+          if (profile.streak_days === 0) {
+            notifications.push({ type: "streak_lost", icon: "💔", title: "Seu streak zerou!", desc: "Estude hoje para recomeçar", priority: 3 });
+          }
+        }
+
+        // Check daily missions
+        const today = new Date().toISOString().split("T")[0];
+        const { data: missions } = await sb.from("daily_missions").select("*").eq("user_key", user_key).eq("mission_date", today).maybeSingle();
+        if (missions) {
+          const mList = missions.missions as any[];
+          const pending = mList.filter((m: any) => m.current < m.target && m.type !== "chest").length;
+          if (pending > 0) {
+            notifications.push({ type: "missions", icon: "🎯", title: `${pending} missão(ões) pendente(s)`, desc: "Complete para ganhar XP!", priority: 2 });
+          }
+        }
+
+        // Check unresolved errors
+        const { count: errorCount } = await sb.from("student_errors").select("*", { count: "exact", head: true }).eq("user_key", user_key).eq("resolved", false);
+        if (errorCount && errorCount >= 3) {
+          notifications.push({ type: "errors", icon: "⚠️", title: `${errorCount} erros para revisar`, desc: "Vá ao Lab de Erros", priority: 2 });
+        }
+
+        // Check new badges
+        const { data: recentBadges } = await sb.from("student_badges").select("*").eq("user_key", user_key)
+          .gte("earned_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+          .order("earned_at", { ascending: false });
+        for (const b of (recentBadges || [])) {
+          notifications.push({ type: "badge", icon: b.badge_icon, title: `Nova conquista: ${b.badge_name}!`, desc: b.badge_description, priority: 1 });
+        }
+
+        // Check chest
+        const chestOpened = (missions?.missions as any[])?.some((m: any) => m.type === "chest");
+        if (!chestOpened) {
+          notifications.push({ type: "chest", icon: "🎁", title: "Baú diário disponível!", desc: "Abra e ganhe XP surpresa", priority: 1 });
+        }
+
+        notifications.sort((a, b) => a.priority - b.priority);
+        return json({ notifications });
       }
 
       case "record_answer": {
@@ -222,9 +321,7 @@ serve(async (req) => {
               error_count: existingError.error_count + 1, last_error_at: new Date().toISOString(), resolved: false
             }).eq("id", existingError.id);
           } else {
-            await sb.from("student_errors").insert({
-              user_key, grade, subject, topic, question_text, wrong_answer, correct_answer
-            });
+            await sb.from("student_errors").insert({ user_key, grade, subject, topic, question_text, wrong_answer, correct_answer });
           }
         }
 
@@ -241,14 +338,12 @@ serve(async (req) => {
           await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
         }
 
-        // Check if first correct
         const badgeCtx: any = {};
         if (correct) {
           const { count } = await sb.from("student_topic_progress").select("*", { count: "exact", head: true }).eq("user_key", user_key);
           if (count === 1) badgeCtx.first_correct = true;
         }
         const newBadges = await checkAndAwardBadges(sb, user_key, badgeCtx);
-
         return json({ xp_earned: xpAmount, correct, new_badges: newBadges });
       }
 
@@ -280,7 +375,7 @@ serve(async (req) => {
           const missions = [
             { id: "m1", title: "Responder 5 exercícios", target: 5, current: 0, type: "exercises", xp: 50 },
             { id: "m2", title: "Estudar por 10 minutos", target: 10, current: 0, type: "study_time", xp: 30 },
-            { id: "m3", title: "Acertar 3 questões seguidas", target: 3, current: 0, type: "streak_correct", xp: 40 },
+            { id: "m3", title: "Acertar 3 seguidas", target: 3, current: 0, type: "streak_correct", xp: 40 },
           ];
           const { data: newMission, error } = await sb.from("daily_missions").insert({
             user_key, mission_date: today, missions, total_count: 3, xp_reward: 120
@@ -312,8 +407,7 @@ serve(async (req) => {
           subjectMap[p.subject].weighted += p.mastery_percent * p.total_attempts;
         }
         const predictions = Object.entries(subjectMap).map(([subject, data]) => ({
-          subject,
-          predicted_grade: Math.round((data.weighted / data.total) / 10)
+          subject, predicted_grade: Math.round((data.weighted / data.total) / 10)
         }));
         return json({ predictions });
       }
@@ -431,7 +525,6 @@ serve(async (req) => {
         const badgeCtx: any = {};
         if (update.winner_key === user_key) badgeCtx.battle_won = true;
         const newBadges = await checkAndAwardBadges(sb, user_key, badgeCtx);
-
         return json({ updated: true, xp_earned: xpAmount, new_badges: newBadges });
       }
 
@@ -441,7 +534,6 @@ serve(async (req) => {
         return json({ sessions: data || [] });
       }
 
-      // Admin endpoints
       case "get_all_students": {
         const { data } = await sb.from("student_profiles").select("*").order("xp", { ascending: false });
         return json({ students: data || [] });
@@ -457,10 +549,10 @@ serve(async (req) => {
         const { turma } = params;
         const { data: students } = await sb.from("student_profiles").select("*").eq("turma", turma);
         if (!students || students.length === 0) return json({ stats: null });
-        const avgXp = Math.round(students.reduce((s, st) => s + st.xp, 0) / students.length);
-        const avgLevel = Math.round(students.reduce((s, st) => s + st.level, 0) / students.length);
-        const totalMinutes = students.reduce((s, st) => s + st.total_study_minutes, 0);
-        const activeStudents = students.filter(s => s.last_study_date).length;
+        const avgXp = Math.round(students.reduce((s: number, st: any) => s + st.xp, 0) / students.length);
+        const avgLevel = Math.round(students.reduce((s: number, st: any) => s + st.level, 0) / students.length);
+        const totalMinutes = students.reduce((s: number, st: any) => s + st.total_study_minutes, 0);
+        const activeStudents = students.filter((s: any) => s.last_study_date).length;
         return json({ stats: { total_students: students.length, avg_xp: avgXp, avg_level: avgLevel, total_minutes: totalMinutes, active_students: activeStudents } });
       }
 
