@@ -22,6 +22,7 @@ import Challenge30Page from "./pages/Challenge30Page";
 import SchoolMapPage from "./pages/SchoolMapPage";
 import MentalLabPage from "./pages/MentalLabPage";
 import WeeklyGoalsPage from "./pages/WeeklyGoalsPage";
+import ExamAlertPage from "./pages/ExamAlertPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const AppRoutes = () => (
     <Route path="/school-map" element={<ProtectedRoute><SchoolMapPage /></ProtectedRoute>} />
     <Route path="/mental-lab" element={<ProtectedRoute><MentalLabPage /></ProtectedRoute>} />
     <Route path="/goals" element={<ProtectedRoute><WeeklyGoalsPage /></ProtectedRoute>} />
+    <Route path="/exam-alert" element={<ProtectedRoute><ExamAlertPage /></ProtectedRoute>} />
     <Route path="/:gradeId" element={<ProtectedRoute><GradePage /></ProtectedRoute>} />
     <Route path="/:gradeId/:subjectId" element={<ProtectedRoute><SubjectPage /></ProtectedRoute>} />
     <Route path="/:gradeId/:subjectId/:topic" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />

@@ -8,17 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_SUBJECTS } from "@/lib/constants";
-
-const GRADES = [
-  { id: "6ano", name: "6º Ano" },
-  { id: "7ano", name: "7º Ano" },
-  { id: "8ano", name: "8º Ano" },
-  { id: "9ano", name: "9º Ano" },
-  { id: "1em", name: "1º Ano EM" },
-  { id: "2em", name: "2º Ano EM" },
-  { id: "3em", name: "3º Ano EM" },
-];
+import { ALL_SUBJECTS, GRADES } from "@/lib/constants";
 
 export default function SimulatorPage() {
   const userKey = useUserKey();
@@ -98,11 +88,11 @@ export default function SimulatorPage() {
         <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
             <Card className="text-center">
-              <CardContent className="p-8 space-y-4">
-                <div className="text-6xl">{gradeScore >= 7 ? "🎉" : gradeScore >= 5 ? "😊" : "😅"}</div>
-                <h2 className="text-3xl font-bold">Simulado de {subjectName}</h2>
+              <CardContent className="p-6 sm:p-8 space-y-4">
+                <div className="text-5xl sm:text-6xl">{gradeScore >= 7 ? "🎉" : gradeScore >= 5 ? "😊" : "😅"}</div>
+                <h2 className="text-2xl sm:text-3xl font-bold">Simulado de {subjectName}</h2>
                 <p className="text-sm text-muted-foreground">{gradeName}</p>
-                <div className="text-5xl font-bold text-primary">{gradeScore.toFixed(1)}</div>
+                <div className="text-4xl sm:text-5xl font-bold text-primary">{gradeScore.toFixed(1)}</div>
                 <div className="text-muted-foreground">Nota estimada</div>
                 {isPerfect && <Badge className="bg-yellow-500/20 text-yellow-600 text-sm">🎯 Badge: Simulado Perfeito!</Badge>}
                 <div className="flex justify-center gap-6">
@@ -127,25 +117,30 @@ export default function SimulatorPage() {
   if (questions.length > 0) {
     const q = questions[currentQ];
     const opts = q.options || q.alternatives || [];
+    const progress = ((currentQ) / questions.length) * 100;
     return (
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container mx-auto p-4 md:p-6 max-w-xl">
-          <div className="flex justify-between items-center mb-6">
+          {/* Progress bar */}
+          <div className="h-1.5 bg-muted rounded-full mb-4 overflow-hidden">
+            <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${progress}%` }} />
+          </div>
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
             <Badge variant="outline">Questão {currentQ + 1}/{questions.length}</Badge>
             <Badge className="gap-1"><CheckCircle className="h-3 w-3" />{answers.filter(a => a.correct).length} acertos</Badge>
           </div>
           <motion.div key={currentQ} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
-              <CardContent className="p-6">
-                <h2 className="text-lg font-bold mb-6">{q.question || q.text}</h2>
-                <div className="space-y-3">
+              <CardContent className="p-4 sm:p-6">
+                <h2 className="text-base sm:text-lg font-bold mb-4 sm:mb-6">{q.question || q.text}</h2>
+                <div className="space-y-2 sm:space-y-3">
                   {opts.map((opt: any, i: number) => {
                     const optText = typeof opt === "string" ? opt : opt.text || opt.label;
                     const isCorrect = optText === (q.correct || q.correctAnswer);
                     return (
                       <Button key={i} variant={answered ? (isCorrect ? "default" : optText === selectedAnswer ? "destructive" : "outline") : "outline"}
-                        className="w-full justify-start h-auto py-3 text-left" onClick={() => handleAnswer(optText)} disabled={answered}
+                        className="w-full justify-start h-auto py-3 text-left text-sm" onClick={() => handleAnswer(optText)} disabled={answered}
                       >
                         <span className="mr-2 font-bold">{String.fromCharCode(65 + i)}.</span>
                         {optText}
@@ -166,8 +161,8 @@ export default function SimulatorPage() {
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Target className="h-8 w-8 text-blue-500" />
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <Target className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500" />
             Simulador de Prova
           </h1>
         </motion.div>
@@ -177,23 +172,25 @@ export default function SimulatorPage() {
             <CardTitle>Configurar Simulado</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Ano/Série</label>
-              <Select value={grade} onValueChange={setGrade}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {GRADES.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-2 block">Matéria</label>
-              <Select value={subject} onValueChange={setSubject}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Ano/Série</label>
+                <Select value={grade} onValueChange={setGrade}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {GRADES.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Matéria</label>
+                <Select value={subject} onValueChange={setSubject}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Questões</label>

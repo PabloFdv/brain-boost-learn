@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Home, MessageCircle, LogOut, Trophy, LayoutDashboard, Swords, Timer, Target, Menu, X, Zap, Brain, School, FlaskConical } from "lucide-react";
+import { BookOpen, Home, MessageCircle, LogOut, Trophy, LayoutDashboard, Swords, Timer, Target, Menu, X, Zap, Brain, School, FlaskConical, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,11 +17,17 @@ const Header = () => {
     { href: "/battle", icon: Swords, label: "Batalha" },
     { href: "/challenge30", icon: Zap, label: "30s" },
     { href: "/simulator", icon: Target, label: "Simulado" },
+    { href: "/exam-alert", icon: AlertTriangle, label: "Provas" },
     { href: "/ranking", icon: Trophy, label: "Ranking" },
     { href: "/focus", icon: Timer, label: "Foco" },
-    { href: "/mental-lab", icon: Brain, label: "Lab Mental" },
-    { href: "/school-map", icon: School, label: "Escola" },
     { href: "/chat", icon: MessageCircle, label: "Prof. IA" },
+  ];
+
+  const mobileExtraItems = [
+    { href: "/mental-lab", icon: Brain, label: "Lab Mental" },
+    { href: "/school-map", icon: School, label: "Mapa Escola" },
+    { href: "/error-lab", icon: FlaskConical, label: "Lab de Erros" },
+    { href: "/goals", icon: Target, label: "Metas Semanais" },
   ];
 
   const isActive = (href: string) => location.pathname === href;
@@ -38,7 +44,7 @@ const Header = () => {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <BookOpen className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="text-base font-bold font-display tracking-tight text-foreground group-hover:text-primary transition-colors hidden sm:block">
+            <span className="text-sm sm:text-base font-bold font-display tracking-tight text-foreground group-hover:text-primary transition-colors hidden sm:block">
               EPISTEMOLOGIA
             </span>
           </Link>
@@ -47,17 +53,15 @@ const Header = () => {
           {isAuthenticated && (
             <nav className="hidden lg:flex items-center gap-0.5">
               {!isHome && (
-                <Link to="/" className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted`}>
-                  <Home className="h-3.5 w-3.5" />
-                  Início
+                <Link to="/" className="flex items-center gap-1.5 text-xs font-medium px-2 py-1.5 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted">
+                  <Home className="h-3.5 w-3.5" />Início
                 </Link>
               )}
               {navItems.map(item => (
                 <Link key={item.href} to={item.href}
                   className={`flex items-center gap-1 text-xs font-medium px-2 py-1.5 rounded-md transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
                 >
-                  <item.icon className="h-3.5 w-3.5" />
-                  {item.label}
+                  <item.icon className="h-3.5 w-3.5" />{item.label}
                 </Link>
               ))}
               {role === "admin" && (
@@ -91,38 +95,37 @@ const Header = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="fixed inset-x-0 top-14 z-40 bg-card/95 backdrop-blur-lg border-b border-border lg:hidden max-h-[70vh] overflow-y-auto"
+            className="fixed inset-x-0 top-14 z-40 bg-card/95 backdrop-blur-lg border-b border-border lg:hidden max-h-[80vh] overflow-y-auto"
           >
-            <nav className="container mx-auto px-4 py-3 flex flex-col gap-1">
+            <nav className="container mx-auto px-4 py-3 grid grid-cols-2 gap-1">
               {!isHome && (
                 <Link to="/" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted">
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted col-span-2">
                   <Home className="h-4 w-4" /> Início
                 </Link>
               )}
               {navItems.map(item => (
                 <Link key={item.href} to={item.href} onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
                 >
                   <item.icon className="h-4 w-4" /> {item.label}
                 </Link>
               ))}
-              <Link to="/error-lab" onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive("/error-lab") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}>
-                <FlaskConical className="h-4 w-4" /> Lab de Erros
-              </Link>
-              <Link to="/goals" onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive("/goals") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}>
-                <Target className="h-4 w-4" /> Metas
-              </Link>
+              {mobileExtraItems.map(item => (
+                <Link key={item.href} to={item.href} onClick={() => setMobileOpen(false)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  <item.icon className="h-4 w-4" /> {item.label}
+                </Link>
+              ))}
               {role === "admin" && (
                 <Link to="/admin" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary">
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-primary col-span-2">
                   Admin
                 </Link>
               )}
               <button onClick={() => { logout(); setMobileOpen(false); }}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10">
+                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 col-span-2">
                 <LogOut className="h-4 w-4" /> Sair
               </button>
             </nav>

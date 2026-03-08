@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Swords, Trophy, Clock, Users, Trash2, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_SUBJECTS, SAMPLE_QUESTIONS_BY_SUBJECT } from "@/lib/constants";
+import { ALL_SUBJECTS, GRADES, SAMPLE_QUESTIONS_BY_SUBJECT } from "@/lib/constants";
 
 function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: string; onFinish: () => void }) {
   const { toast } = useToast();
@@ -48,18 +48,18 @@ function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: strin
     <div className="container mx-auto p-4 md:p-6 max-w-xl">
       <div className="flex justify-between items-center mb-4">
         <Badge variant="outline">{subjectName}</Badge>
-        <Badge variant="outline">Questão {currentQ + 1}/{questions.length}</Badge>
-        <Badge className="gap-1"><Trophy className="h-3 w-3" />{score} acertos</Badge>
+        <Badge variant="outline">Q {currentQ + 1}/{questions.length}</Badge>
+        <Badge className="gap-1"><Trophy className="h-3 w-3" />{score}</Badge>
       </div>
       <motion.div key={currentQ} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
         <Card>
-          <CardContent className="p-6">
-            <h2 className="text-xl font-bold mb-6">{q.q}</h2>
-            <div className="grid grid-cols-2 gap-3">
+          <CardContent className="p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">{q.q}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {q.options.map((opt: string) => (
                 <Button key={opt}
                   variant={answered ? (opt === q.correct ? "default" : opt === selectedAnswer ? "destructive" : "outline") : "outline"}
-                  className="h-14 text-base" onClick={() => handleAnswer(opt)} disabled={answered}
+                  className="h-12 sm:h-14 text-sm sm:text-base whitespace-normal" onClick={() => handleAnswer(opt)} disabled={answered}
                 >
                   {opt}
                 </Button>
@@ -79,6 +79,7 @@ export default function BattlePage() {
   const [battles, setBattles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [subject, setSubject] = useState("matematica");
+  const [grade, setGrade] = useState("1em");
   const [playing, setPlaying] = useState<any>(null);
   const [creating, setCreating] = useState(false);
 
@@ -104,7 +105,7 @@ export default function BattlePage() {
       const res = await createBattle(userKey, profile.display_name, subject, questions);
       setBattles(prev => [res.battle, ...prev]);
       const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
-      toast({ title: "⚔️ Batalha criada!", description: `Matéria: ${subjectName}. Aguardando oponente...` });
+      toast({ title: "⚔️ Batalha criada!", description: `${subjectName} — Aguardando oponente...` });
     } catch {
       toast({ title: "Erro", description: "Falha ao criar batalha", variant: "destructive" });
     }
@@ -147,34 +148,41 @@ export default function BattlePage() {
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <Swords className="h-8 w-8 text-red-500" />
-            Batalha
+          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
+            <Swords className="h-7 w-7 sm:h-8 sm:w-8 text-red-500" />
+            Batalha PvP
           </h1>
-          <p className="text-muted-foreground mt-1">Desafie outros alunos em qualquer matéria!</p>
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">Desafie outros alunos em qualquer matéria e ano!</p>
         </motion.div>
 
         <Card>
-          <CardHeader><CardTitle className="text-lg">Criar Desafio</CardTitle></CardHeader>
-          <CardContent className="flex gap-3 flex-wrap">
-            <Select value={subject} onValueChange={setSubject}>
-              <SelectTrigger className="flex-1 min-w-40"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <Button onClick={handleCreate} disabled={creating}>
+          <CardHeader className="pb-3"><CardTitle className="text-lg">Criar Desafio</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-3 flex-wrap">
+              <Select value={grade} onValueChange={setGrade}>
+                <SelectTrigger className="w-32 sm:w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {GRADES.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={subject} onValueChange={setSubject}>
+                <SelectTrigger className="flex-1 min-w-32"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleCreate} disabled={creating} className="w-full sm:w-auto">
               {creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Swords className="h-4 w-4 mr-2" />}
-              {creating ? "Criando..." : "Criar"}
+              {creating ? "Criando..." : "Criar Batalha"}
             </Button>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Batalhas ({battles.length})
+              <Users className="h-5 w-5" />Batalhas ({battles.length})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -183,46 +191,39 @@ export default function BattlePage() {
             ) : battles.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">Nenhuma batalha. Crie uma!</div>
             ) : battles.map((b: any) => {
-              const subjectName = ALL_SUBJECTS.find(s => s.id === b.subject)?.name || b.subject;
+              const sName = ALL_SUBJECTS.find(s => s.id === b.subject)?.name || b.subject;
               const isOwner = b.challenger_key === userKey;
               return (
                 <motion.div key={b.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors"
+                  className="flex items-center gap-2 sm:gap-3 p-3 rounded-lg border hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">
-                      {b.challenger_name} {b.opponent_name ? `vs ${b.opponent_name}` : "(aguardando oponente...)"}
+                    <div className="font-medium truncate text-sm sm:text-base">
+                      {b.challenger_name} {b.opponent_name ? `vs ${b.opponent_name}` : "(aguardando...)"}
                     </div>
                     <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap mt-1">
-                      <Clock className="h-3 w-3" />
-                      {new Date(b.created_at).toLocaleDateString("pt-BR")}
-                      <Badge variant="outline" className="text-xs">{subjectName}</Badge>
-                      {b.status === "completed" && (
-                        <span className="font-medium">{b.challenger_score} × {b.opponent_score}</span>
-                      )}
+                      <Badge variant="outline" className="text-[10px] h-4">{sName}</Badge>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(b.created_at).toLocaleDateString("pt-BR")}</span>
+                      {b.status === "completed" && <span className="font-medium">{b.challenger_score} × {b.opponent_score}</span>}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {b.status === "pending" && !isOwner && (
-                      <Button size="sm" onClick={() => handleJoin(b)}>Aceitar</Button>
-                    )}
-                    {b.status === "pending" && isOwner && (
-                      <Badge variant="outline">Aguardando</Badge>
-                    )}
+                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    {b.status === "pending" && !isOwner && <Button size="sm" onClick={() => handleJoin(b)} className="h-7 text-xs">Aceitar</Button>}
+                    {b.status === "pending" && isOwner && <Badge variant="outline" className="text-[10px]">Aguardando</Badge>}
                     {b.status === "active" && (
-                      <Button size="sm" onClick={() => setPlaying(b)} className="gap-1">
+                      <Button size="sm" onClick={() => setPlaying(b)} className="gap-1 h-7 text-xs">
                         <Play className="h-3 w-3" />Jogar
                       </Button>
                     )}
                     {b.status === "completed" && (
-                      <Badge variant={b.winner_key === userKey ? "default" : b.winner_key === "draw" ? "secondary" : "destructive"}>
+                      <Badge variant={b.winner_key === userKey ? "default" : b.winner_key === "draw" ? "secondary" : "destructive"} className="text-[10px]">
                         {b.winner_key === userKey ? "Vitória!" : b.winner_key === "draw" ? "Empate" : "Derrota"}
                       </Badge>
                     )}
-                    <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive"
                       onClick={(e) => handleDelete(b.id, e)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </motion.div>
