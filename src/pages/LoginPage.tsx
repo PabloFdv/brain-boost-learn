@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { KeyRound, Loader2, BookOpen, ShieldAlert } from "lucide-react";
+import { KeyRound, Loader2, BookOpen, ShieldAlert, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,9 +11,19 @@ import ThemeToggle from "@/components/ThemeToggle";
 const LoginPage = () => {
   const [key, setKey] = useState("");
   const [loading, setLoading] = useState(false);
-  const { login, setAdminKey } = useAuth();
+  const { login, setAdminKey, isAuthenticated, role } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Auto-redirect if already logged in
+  if (isAuthenticated) {
+    if (role === "admin") {
+      navigate("/admin", { replace: true });
+    } else {
+      navigate("/dashboard", { replace: true });
+    }
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +53,6 @@ const LoginPage = () => {
 
       login(data.role, data.name, data.token);
 
-      // Store key for session validation
       if (data.role === "admin") {
         setAdminKey(key.trim());
         toast({ title: `Bem-vindo, ${data.name}! 👑`, description: "Acesso de administrador liberado." });
@@ -51,7 +60,7 @@ const LoginPage = () => {
       } else {
         localStorage.setItem("epistemologia_user_key", key.trim());
         toast({ title: "Acesso liberado! 🎉", description: "Bons estudos!" });
-        navigate("/");
+        navigate("/dashboard");
       }
     } catch (err) {
       toast({
@@ -112,7 +121,13 @@ const LoginPage = () => {
 
           <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
             <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>Cada senha funciona apenas uma vez. Não compartilhe sua senha.</p>
+            <div>
+              <p>Sua sessão fica salva permanentemente neste dispositivo.</p>
+              <p className="mt-1 flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                Senhas globais permitem acesso de vários alunos.
+              </p>
+            </div>
           </div>
         </form>
       </motion.div>

@@ -25,22 +25,60 @@ serve(async (req) => {
 
     // Admin check
     if (trimmedKey === ADMIN_PASSWORD) {
-      // Generate a simple session token
       const token = crypto.randomUUID();
       return new Response(JSON.stringify({
         role: "admin",
         name: ADMIN_NAME,
         token,
+        persistent: true,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check access_keys table
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, supabaseKey);
 
+    // Check global keys first
+    const { data: globalKey } = await sb
+      .from("global_keys")
+      .select("*")
+      .eq("key", trimmedKey)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (globalKey) {
+      // Check expiration
+      if (globalKey.expires_at && new Date(globalKey.expires_at) < new Date()) {
+        return new Response(JSON.stringify({ error: "Senha expirada" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Check max uses
+      if (globalKey.max_uses && globalKey.current_uses >= globalKey.max_uses) {
+        return new Response(JSON.stringify({ error: "Senha atingiu o limite de usos" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      // Increment usage
+      await sb.from("global_keys").update({
+        current_uses: globalKey.current_uses + 1,
+      }).eq("id", globalKey.id);
+
+      const token = crypto.randomUUID();
+      return new Response(JSON.stringify({
+        role: "user",
+        name: "Estudante",
+        token,
+        persistent: true,
+        key_type: "global",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Check individual access_keys
     const { data: keyData, error } = await sb
       .from("access_keys")
       .select("*")
@@ -62,12 +100,20 @@ serve(async (req) => {
     }
 
     if (keyData.used) {
-      return new Response(JSON.stringify({ error: "Senha já utilizada" }), {
-        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      // Allow re-login with used key (persistent login)
+      const token = crypto.randomUUID();
+      return new Response(JSON.stringify({
+        role: "user",
+        name: keyData.used_by || "Estudante",
+        token,
+        persistent: true,
+        key_type: "individual",
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Mark as used
+    // Mark as used (first time)
     await sb.from("access_keys").update({
       used: true,
       used_at: new Date().toISOString(),
@@ -78,6 +124,8 @@ serve(async (req) => {
       role: "user",
       name: "Estudante",
       token,
+      persistent: true,
+      key_type: "individual",
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

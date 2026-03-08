@@ -22,7 +22,8 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    // Multi-layer persistence: localStorage + sessionStorage
+    const stored = localStorage.getItem(STORAGE_KEY) || sessionStorage.getItem(STORAGE_KEY);
     if (stored) {
       try { return JSON.parse(stored); } catch { /* ignore */ }
     }
@@ -33,12 +34,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem(ADMIN_KEY_STORAGE);
   });
 
-  // Persist auth to localStorage
+  // Persist auth to BOTH localStorage and sessionStorage for infinite persistence
   useEffect(() => {
     if (auth.isAuthenticated) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(auth));
+      const data = JSON.stringify(auth);
+      localStorage.setItem(STORAGE_KEY, data);
+      sessionStorage.setItem(STORAGE_KEY, data);
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     }
   }, [auth]);
 
@@ -50,56 +54,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [adminKey]);
 
-  // Validate session on mount and periodically (check if key was blocked/deleted)
+  // Listen for storage events (other tabs) to sync auth state
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY) {
+        if (e.newValue) {
+          try { setAuth(JSON.parse(e.newValue)); } catch {}
+        } else {
+          setAuth({ isAuthenticated: false, role: null, name: null, token: null });
+        }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
+  // Keep session alive - re-validate periodically but DON'T force logout on network errors
   const validateSession = useCallback(async () => {
     if (!auth.isAuthenticated) return;
     
-    // Admin validates with stored admin key
     if (auth.role === "admin" && adminKey) {
       try {
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth-login`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key: adminKey }),
-          }
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: adminKey }) }
         );
-        if (!res.ok) {
-          // Admin password changed or invalid — force logout
-          logout();
-        }
-      } catch {
-        // Network error — don't logout, just skip
-      }
+        // Only logout if explicitly denied (403), not on network errors
+        if (res.status === 403) logout();
+      } catch { /* network error - keep session */ }
       return;
     }
 
-    // User validates with stored user key  
-    const userKey = localStorage.getItem(USER_KEY_STORAGE);
-    if (auth.role === "user" && userKey) {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auth-validate`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ key: userKey }),
-          }
-        );
-        if (!res.ok) {
-          logout();
-        }
-      } catch {
-        // Network error — keep session
-      }
-    }
+    // For users, just keep the session - keys are persistent now
+    // No need to validate since keys allow re-login
   }, [auth.isAuthenticated, auth.role, adminKey]);
 
   useEffect(() => {
     validateSession();
-    // Re-validate every 5 minutes
-    const interval = setInterval(validateSession, 5 * 60 * 1000);
+    const interval = setInterval(validateSession, 10 * 60 * 1000); // every 10 min
     return () => clearInterval(interval);
   }, [validateSession]);
 
@@ -111,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuth({ isAuthenticated: false, role: null, name: null, token: null });
     setAdminKey(null);
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(ADMIN_KEY_STORAGE);
     localStorage.removeItem(USER_KEY_STORAGE);
   };
