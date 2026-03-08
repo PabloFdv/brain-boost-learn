@@ -18,7 +18,7 @@ serve(async (req) => {
     const systemPrompt = `Você é um professor brasileiro que cria exercícios de múltipla escolha didáticos e precisos para alunos.
 
 REGRAS:
-1. Crie exatamente 5 questões sobre o tema
+1. Crie exatamente ${questionsCount} questões sobre o tema
 2. Cada questão deve ter 4 alternativas (A, B, C, D)
 3. As questões devem cobrir diferentes aspectos do tema
 4. As alternativas erradas devem ser plausíveis (não absurdas)
