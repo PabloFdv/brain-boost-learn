@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Swords, Trophy, Clock, Users, Trash2, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_SUBJECTS, GRADES, getQuestionsForGradeSubject } from "@/lib/constants";
+import { ALL_SUBJECTS_WITH_TECHNICAL as ALL_SUBJECTS, GRADES, getQuestionsForGradeSubject } from "@/lib/constants";
 import AnswerFeedback, { playFeedbackSound } from "@/components/AnswerFeedback";
 
 function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: string; onFinish: () => void }) {

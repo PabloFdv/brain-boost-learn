@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Target, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_SUBJECTS, GRADES } from "@/lib/constants";
+import { ALL_SUBJECTS_WITH_TECHNICAL, GRADES } from "@/lib/constants";
+import AnswerFeedback, { playFeedbackSound } from "@/components/AnswerFeedback";
 
 export default function SimulatorPage() {
   const userKey = useUserKey();
@@ -23,6 +24,7 @@ export default function SimulatorPage() {
   const [finished, setFinished] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
+  const [feedback, setFeedback] = useState<{ show: boolean; correct: boolean }>({ show: false, correct: false });
   const [startTime] = useState(Date.now());
 
   const handleStart = async () => {
@@ -48,21 +50,34 @@ export default function SimulatorPage() {
     setGenerating(false);
   };
 
+  const getCorrectAnswer = (q: any) => {
+    // Handle both text-based and index-based correct answers
+    if (q.correctAnswer) return q.correctAnswer;
+    if (typeof q.correct === "number" && q.options) return q.options[q.correct];
+    return q.correct;
+  };
+
   const handleAnswer = (answer: string) => {
     if (answered) return;
     setAnswered(true);
     setSelectedAnswer(answer);
     const q = questions[currentQ];
-    const correct = answer === q.correct || answer === q.correctAnswer;
+    const correctText = getCorrectAnswer(q);
+    const correct = answer === correctText;
     const newAnswer = { question: currentQ, answer, correct, time: Date.now() - startTime };
     const newAnswers = [...answers, newAnswer];
     setAnswers(newAnswers);
 
+    // Show feedback
+    setFeedback({ show: true, correct });
+    playFeedbackSound(correct);
+
     if (userKey) {
-      recordAnswer(userKey, { grade, subject, topic: "Simulado", correct, question_text: q.question || q.text, wrong_answer: correct ? undefined : answer, correct_answer: q.correct || q.correctAnswer });
+      recordAnswer(userKey, { grade, subject, topic: "Simulado", correct, question_text: q.question || q.text, wrong_answer: correct ? undefined : answer, correct_answer: correctText });
     }
 
     setTimeout(() => {
+      setFeedback({ show: false, correct: false });
       if (currentQ + 1 < questions.length) {
         setCurrentQ(c => c + 1);
         setAnswered(false);
@@ -79,7 +94,7 @@ export default function SimulatorPage() {
   if (finished) {
     const totalCorrect = answers.filter(a => a.correct).length;
     const gradeScore = (totalCorrect / questions.length) * 10;
-    const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
+    const subjectName = ALL_SUBJECTS_WITH_TECHNICAL.find(s => s.id === subject)?.name || subject;
     const gradeName = GRADES.find(g => g.id === grade)?.name || grade;
     const isPerfect = totalCorrect === questions.length;
     return (
@@ -105,6 +120,23 @@ export default function SimulatorPage() {
                     <div className="text-xs text-muted-foreground">Erros</div>
                   </div>
                 </div>
+                {/* Show explanation review */}
+                <details className="text-left mt-4">
+                  <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">Ver gabarito e explicações</summary>
+                  <div className="mt-3 space-y-3 max-h-60 overflow-y-auto">
+                    {questions.map((q, i) => {
+                      const a = answers[i];
+                      const correctText = getCorrectAnswer(q);
+                      return (
+                        <div key={i} className={`p-3 rounded-lg border text-sm ${a?.correct ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                          <p className="font-medium">{i+1}. {q.question || q.text}</p>
+                          <p className="text-xs mt-1">✅ {correctText}</p>
+                          {q.explanation && <p className="text-xs mt-1 text-muted-foreground">{q.explanation}</p>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
                 <Button onClick={() => { setQuestions([]); setFinished(false); }} className="mt-4">Novo Simulado</Button>
               </CardContent>
             </Card>
@@ -117,10 +149,12 @@ export default function SimulatorPage() {
   if (questions.length > 0) {
     const q = questions[currentQ];
     const opts = q.options || q.alternatives || [];
+    const correctText = getCorrectAnswer(q);
     const progress = ((currentQ) / questions.length) * 100;
     return (
       <div className="min-h-screen bg-background">
         <Header />
+        <AnswerFeedback show={feedback.show} correct={feedback.correct} />
         <div className="container mx-auto p-4 md:p-6 max-w-xl">
           {/* Progress bar */}
           <div className="h-1.5 bg-muted rounded-full mb-4 overflow-hidden">
@@ -133,21 +167,26 @@ export default function SimulatorPage() {
           <motion.div key={currentQ} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
             <Card>
               <CardContent className="p-4 sm:p-6">
-                <h2 className="text-base sm:text-lg font-bold mb-4 sm:mb-6">{q.question || q.text}</h2>
+                <h2 className="text-base sm:text-lg font-bold mb-4 sm:mb-6 leading-relaxed">{q.question || q.text}</h2>
                 <div className="space-y-2 sm:space-y-3">
                   {opts.map((opt: any, i: number) => {
                     const optText = typeof opt === "string" ? opt : opt.text || opt.label;
-                    const isCorrect = optText === (q.correct || q.correctAnswer);
+                    const isCorrect = optText === correctText;
                     return (
                       <Button key={i} variant={answered ? (isCorrect ? "default" : optText === selectedAnswer ? "destructive" : "outline") : "outline"}
-                        className="w-full justify-start h-auto py-3 text-left text-sm" onClick={() => handleAnswer(optText)} disabled={answered}
+                        className="w-full justify-start h-auto py-3 text-left text-sm whitespace-normal leading-relaxed" onClick={() => handleAnswer(optText)} disabled={answered}
                       >
-                        <span className="mr-2 font-bold">{String.fromCharCode(65 + i)}.</span>
-                        {optText}
+                        <span className="mr-2 font-bold shrink-0">{String.fromCharCode(65 + i)}.</span>
+                        <span>{optText}</span>
                       </Button>
                     );
                   })}
                 </div>
+                {answered && q.explanation && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mt-4 p-3 rounded-lg bg-muted/50 border">
+                    <p className="text-xs sm:text-sm text-muted-foreground"><strong>💡 Explicação:</strong> {q.explanation}</p>
+                  </motion.div>
+                )}
               </CardContent>
             </Card>
           </motion.div>
@@ -155,6 +194,10 @@ export default function SimulatorPage() {
       </div>
     );
   }
+
+  // Separate regular and technical subjects
+  const regularSubjects = ALL_SUBJECTS_WITH_TECHNICAL.filter(s => !["automacao","dev-sistemas","mecatronica","mecanica","edificacoes","eletromec","iot"].includes(s.id));
+  const technicalSubjects = ALL_SUBJECTS_WITH_TECHNICAL.filter(s => ["automacao","dev-sistemas","mecatronica","mecanica","edificacoes","eletromec","iot"].includes(s.id));
 
   return (
     <div className="min-h-screen bg-background">
@@ -165,6 +208,7 @@ export default function SimulatorPage() {
             <Target className="h-7 w-7 sm:h-8 sm:w-8 text-blue-500" />
             Simulador de Prova
           </h1>
+          <p className="text-muted-foreground text-sm mt-1">Questões geradas por IA no estilo ENEM/vestibular</p>
         </motion.div>
 
         <Card>
@@ -187,7 +231,10 @@ export default function SimulatorPage() {
                 <Select value={subject} onValueChange={setSubject}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    <SelectItem value="_divider_regular" disabled>── Disciplinas ──</SelectItem>
+                    {regularSubjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    <SelectItem value="_divider_tech" disabled>── Técnicas SENAI ──</SelectItem>
+                    {technicalSubjects.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -205,7 +252,7 @@ export default function SimulatorPage() {
               </Select>
             </div>
             <Button onClick={handleStart} disabled={generating} className="w-full" size="lg">
-              {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Gerando...</> : "Começar Simulado"}
+              {generating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Gerando simulado...</> : "Começar Simulado"}
             </Button>
           </CardContent>
         </Card>
