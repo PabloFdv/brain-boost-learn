@@ -10,10 +10,21 @@ import { Target, CheckCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ALL_SUBJECTS } from "@/lib/constants";
 
+const GRADES = [
+  { id: "6ano", name: "6º Ano" },
+  { id: "7ano", name: "7º Ano" },
+  { id: "8ano", name: "8º Ano" },
+  { id: "9ano", name: "9º Ano" },
+  { id: "1em", name: "1º Ano EM" },
+  { id: "2em", name: "2º Ano EM" },
+  { id: "3em", name: "3º Ano EM" },
+];
+
 export default function SimulatorPage() {
   const userKey = useUserKey();
   const { toast } = useToast();
   const [subject, setSubject] = useState("matematica");
+  const [grade, setGrade] = useState("1em");
   const [numQuestions, setNumQuestions] = useState("10");
   const [generating, setGenerating] = useState(false);
   const [questions, setQuestions] = useState<any[]>([]);
@@ -30,7 +41,7 @@ export default function SimulatorPage() {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-exercises`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ grade: "9ano", subject, topic: "Simulado Geral", numQuestions: parseInt(numQuestions) }),
+        body: JSON.stringify({ grade, subject, topic: "Simulado Geral", numQuestions: parseInt(numQuestions) }),
       });
       const data = await res.json();
       if (data.questions?.length > 0) {
@@ -58,7 +69,7 @@ export default function SimulatorPage() {
     setAnswers(newAnswers);
 
     if (userKey) {
-      recordAnswer(userKey, { grade: "9ano", subject, topic: "Simulado", correct, question_text: q.question || q.text, wrong_answer: correct ? undefined : answer, correct_answer: q.correct || q.correctAnswer });
+      recordAnswer(userKey, { grade, subject, topic: "Simulado", correct, question_text: q.question || q.text, wrong_answer: correct ? undefined : answer, correct_answer: q.correct || q.correctAnswer });
     }
 
     setTimeout(() => {
@@ -69,15 +80,18 @@ export default function SimulatorPage() {
       } else {
         setFinished(true);
         const totalCorrect = newAnswers.filter(a => a.correct).length;
-        if (userKey) addXP(userKey, totalCorrect * 10 + 20, "simulado");
+        const isPerfect = totalCorrect === questions.length;
+        if (userKey) addXP(userKey, totalCorrect * 10 + 20, isPerfect ? "simulado_perfeito" : "simulado");
       }
     }, 1200);
   };
 
   if (finished) {
     const totalCorrect = answers.filter(a => a.correct).length;
-    const grade = (totalCorrect / questions.length) * 10;
+    const gradeScore = (totalCorrect / questions.length) * 10;
     const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
+    const gradeName = GRADES.find(g => g.id === grade)?.name || grade;
+    const isPerfect = totalCorrect === questions.length;
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -85,10 +99,12 @@ export default function SimulatorPage() {
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
             <Card className="text-center">
               <CardContent className="p-8 space-y-4">
-                <div className="text-6xl">{grade >= 7 ? "🎉" : grade >= 5 ? "😊" : "😅"}</div>
+                <div className="text-6xl">{gradeScore >= 7 ? "🎉" : gradeScore >= 5 ? "😊" : "😅"}</div>
                 <h2 className="text-3xl font-bold">Simulado de {subjectName}</h2>
-                <div className="text-5xl font-bold text-primary">{grade.toFixed(1)}</div>
+                <p className="text-sm text-muted-foreground">{gradeName}</p>
+                <div className="text-5xl font-bold text-primary">{gradeScore.toFixed(1)}</div>
                 <div className="text-muted-foreground">Nota estimada</div>
+                {isPerfect && <Badge className="bg-yellow-500/20 text-yellow-600 text-sm">🎯 Badge: Simulado Perfeito!</Badge>}
                 <div className="flex justify-center gap-6">
                   <div className="text-center">
                     <div className="text-2xl font-bold text-green-500">{totalCorrect}</div>
@@ -161,6 +177,15 @@ export default function SimulatorPage() {
             <CardTitle>Configurar Simulado</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Ano/Série</label>
+              <Select value={grade} onValueChange={setGrade}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {GRADES.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Matéria</label>
               <Select value={subject} onValueChange={setSubject}>

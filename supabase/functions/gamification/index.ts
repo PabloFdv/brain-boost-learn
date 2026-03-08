@@ -26,6 +26,96 @@ function calculateLevel(xp: number): number {
   }
 }
 
+// Badge definitions
+const BADGE_DEFS: Record<string, { name: string; icon: string; description: string }> = {
+  first_correct: { name: "Primeiro Acerto", icon: "✅", description: "Acertou a primeira questão" },
+  xp_100: { name: "Centurião", icon: "💯", description: "Alcançou 100 XP" },
+  xp_500: { name: "Meio Milhar", icon: "⚡", description: "Alcançou 500 XP" },
+  xp_1000: { name: "Mil XP", icon: "🔥", description: "Alcançou 1000 XP" },
+  xp_5000: { name: "Lenda", icon: "👑", description: "Alcançou 5000 XP" },
+  streak_3: { name: "Consistente", icon: "🔥", description: "3 dias seguidos estudando" },
+  streak_7: { name: "Dedicado", icon: "🌟", description: "7 dias seguidos estudando" },
+  streak_30: { name: "Mestre do Hábito", icon: "💎", description: "30 dias seguidos estudando" },
+  battle_won: { name: "Guerreiro", icon: "⚔️", description: "Venceu uma batalha" },
+  battle_5: { name: "Gladiador", icon: "🏛️", description: "Venceu 5 batalhas" },
+  perfect_sim: { name: "Simulado Perfeito", icon: "🎯", description: "Acertou 100% em um simulado" },
+  challenge30_10: { name: "Veloz", icon: "⚡", description: "Acertou 10+ no Desafio 30s" },
+  level_5: { name: "Estudante Dedicado", icon: "📚", description: "Alcançou nível 5" },
+  level_10: { name: "Mestre da Turma", icon: "🏆", description: "Alcançou nível 10" },
+  level_20: { name: "Gênio da Escola", icon: "🧠", description: "Alcançou nível 20" },
+  first_battle: { name: "Desafiante", icon: "🥊", description: "Participou da primeira batalha" },
+  study_60min: { name: "Hora de Estudo", icon: "⏰", description: "Estudou 60 minutos no total" },
+  study_300min: { name: "Maratonista", icon: "🏃", description: "Estudou 5 horas no total" },
+  errors_resolved_10: { name: "Aprendiz", icon: "🔄", description: "Resolveu 10 erros" },
+  mastery_topic: { name: "Especialista", icon: "⭐", description: "Dominou um tópico (90%+)" },
+};
+
+async function checkAndAwardBadges(sb: any, userKey: string, context?: Record<string, any>) {
+  const awarded: string[] = [];
+  const { data: existing } = await sb.from("student_badges").select("badge_id").eq("user_key", userKey);
+  const has = new Set((existing || []).map((b: any) => b.badge_id));
+
+  async function award(id: string) {
+    if (has.has(id)) return;
+    const def = BADGE_DEFS[id];
+    if (!def) return;
+    await sb.from("student_badges").insert({ user_key: userKey, badge_id: id, badge_name: def.name, badge_icon: def.icon, badge_description: def.description }).onConflict("user_key,badge_id").ignore();
+    awarded.push(id);
+    has.add(id);
+  }
+
+  const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", userKey).maybeSingle();
+  if (!profile) return awarded;
+
+  // XP milestones
+  if (profile.xp >= 100) await award("xp_100");
+  if (profile.xp >= 500) await award("xp_500");
+  if (profile.xp >= 1000) await award("xp_1000");
+  if (profile.xp >= 5000) await award("xp_5000");
+
+  // Level milestones
+  if (profile.level >= 5) await award("level_5");
+  if (profile.level >= 10) await award("level_10");
+  if (profile.level >= 20) await award("level_20");
+
+  // Streak milestones
+  if (profile.streak_days >= 3) await award("streak_3");
+  if (profile.streak_days >= 7) await award("streak_7");
+  if (profile.streak_days >= 30) await award("streak_30");
+
+  // Study time
+  if (profile.total_study_minutes >= 60) await award("study_60min");
+  if (profile.total_study_minutes >= 300) await award("study_300min");
+
+  // Context-specific badges
+  if (context?.first_correct) await award("first_correct");
+  if (context?.battle_won) await award("battle_won");
+  if (context?.first_battle) await award("first_battle");
+  if (context?.perfect_sim) await award("perfect_sim");
+  if (context?.challenge30_score && context.challenge30_score >= 10) await award("challenge30_10");
+
+  // Check battle wins count
+  const { count: battleWins } = await sb.from("battle_challenges").select("*", { count: "exact", head: true }).eq("winner_key", userKey);
+  if (battleWins && battleWins >= 5) await award("battle_5");
+
+  // Check resolved errors
+  const { count: resolvedCount } = await sb.from("student_errors").select("*", { count: "exact", head: true }).eq("user_key", userKey).eq("resolved", true);
+  if (resolvedCount && resolvedCount >= 10) await award("errors_resolved_10");
+
+  // Check mastery
+  const { data: mastered } = await sb.from("student_topic_progress").select("id").eq("user_key", userKey).gte("mastery_percent", 90).limit(1);
+  if (mastered && mastered.length > 0) await award("mastery_topic");
+
+  return awarded;
+}
+
+function json(data: any, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -63,7 +153,9 @@ serve(async (req) => {
           data.streak_days = 1;
           data.last_study_date = today;
         }
-        return json({ profile: data });
+        // Check badges
+        const newBadges = await checkAndAwardBadges(sb, user_key);
+        return json({ profile: data, new_badges: newBadges });
       }
 
       case "update_profile": {
@@ -76,12 +168,6 @@ serve(async (req) => {
         return json({ profile: data });
       }
 
-      case "update_profile_name": {
-        const { user_key, display_name } = params;
-        await sb.from("student_profiles").update({ display_name }).eq("user_key", user_key);
-        return json({ updated: true });
-      }
-
       case "add_xp": {
         const { user_key, amount, reason } = params;
         const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", user_key).single();
@@ -90,7 +176,13 @@ serve(async (req) => {
         const newLevel = calculateLevel(newXp);
         const leveledUp = newLevel > profile.level;
         await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
-        return json({ xp: newXp, level: newLevel, leveled_up: leveledUp, xp_added: amount || 10 });
+        
+        const badgeCtx: any = {};
+        if (reason === "challenge_30s" && amount) badgeCtx.challenge30_score = Math.floor((amount - 10) / 15);
+        if (reason === "simulado_perfeito") badgeCtx.perfect_sim = true;
+        const newBadges = await checkAndAwardBadges(sb, user_key, badgeCtx);
+        
+        return json({ xp: newXp, level: newLevel, leveled_up: leveledUp, xp_added: amount || 10, new_badges: newBadges });
       }
 
       case "record_answer": {
@@ -131,7 +223,6 @@ serve(async (req) => {
           }
         }
 
-        // Mark error as resolved if correct
         if (correct && question_text) {
           await sb.from("student_errors").update({ resolved: true })
             .eq("user_key", user_key).eq("question_text", question_text).eq("resolved", false);
@@ -145,7 +236,15 @@ serve(async (req) => {
           await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
         }
 
-        return json({ xp_earned: xpAmount, correct });
+        // Check if first correct
+        const badgeCtx: any = {};
+        if (correct) {
+          const { count } = await sb.from("student_topic_progress").select("*", { count: "exact", head: true }).eq("user_key", user_key);
+          if (count === 1) badgeCtx.first_correct = true;
+        }
+        const newBadges = await checkAndAwardBadges(sb, user_key, badgeCtx);
+
+        return json({ xp_earned: xpAmount, correct, new_badges: newBadges });
       }
 
       case "get_brain_map": {
@@ -258,12 +357,19 @@ serve(async (req) => {
         return json({ missions: data || [] });
       }
 
+      case "get_badges": {
+        const { user_key } = params;
+        const { data } = await sb.from("student_badges").select("*").eq("user_key", user_key).order("earned_at", { ascending: false });
+        return json({ badges: data || [] });
+      }
+
       case "create_battle": {
         const { challenger_key, challenger_name, subject, questions } = params;
         const { data, error } = await sb.from("battle_challenges").insert({
           challenger_key, challenger_name, subject, questions, status: "pending"
         }).select("*").single();
         if (error) throw error;
+        await checkAndAwardBadges(sb, challenger_key, { first_battle: true });
         return json({ battle: data });
       }
 
@@ -277,7 +383,6 @@ serve(async (req) => {
 
       case "delete_battle": {
         const { battle_id, user_key } = params;
-        // Only allow deleting own pending battles
         const { data: battle } = await sb.from("battle_challenges").select("*").eq("id", battle_id).single();
         if (!battle) return json({ error: "Battle not found" }, 404);
         if (battle.challenger_key !== user_key && battle.status !== "completed") {
@@ -291,6 +396,7 @@ serve(async (req) => {
         const { battle_id, opponent_key, opponent_name } = params;
         await sb.from("battle_challenges").update({ opponent_key, opponent_name, status: "active" }).eq("id", battle_id);
         const { data } = await sb.from("battle_challenges").select("*").eq("id", battle_id).single();
+        await checkAndAwardBadges(sb, opponent_key, { first_battle: true });
         return json({ battle: data });
       }
 
@@ -309,7 +415,6 @@ serve(async (req) => {
         }
         await sb.from("battle_challenges").update(update).eq("id", battle_id);
 
-        // Add XP for battle participation
         const xpAmount = score * 10 + 20;
         const { data: profile } = await sb.from("student_profiles").select("xp, level").eq("user_key", user_key).single();
         if (profile) {
@@ -318,7 +423,11 @@ serve(async (req) => {
           await sb.from("student_profiles").update({ xp: newXp, level: newLevel }).eq("user_key", user_key);
         }
 
-        return json({ updated: true, xp_earned: xpAmount });
+        const badgeCtx: any = {};
+        if (update.winner_key === user_key) badgeCtx.battle_won = true;
+        const newBadges = await checkAndAwardBadges(sb, user_key, badgeCtx);
+
+        return json({ updated: true, xp_earned: xpAmount, new_badges: newBadges });
       }
 
       case "get_study_history": {
@@ -356,7 +465,8 @@ serve(async (req) => {
         const { data: progress } = await sb.from("student_topic_progress").select("*").eq("user_key", user_key);
         const { data: errors } = await sb.from("student_errors").select("*").eq("user_key", user_key).eq("resolved", false);
         const { data: sessions } = await sb.from("study_sessions").select("*").eq("user_key", user_key).order("started_at", { ascending: false }).limit(10);
-        return json({ profile, progress: progress || [], errors: errors || [], sessions: sessions || [] });
+        const { data: badges } = await sb.from("student_badges").select("*").eq("user_key", user_key);
+        return json({ profile, progress: progress || [], errors: errors || [], sessions: sessions || [], badges: badges || [] });
       }
 
       default:
@@ -364,12 +474,6 @@ serve(async (req) => {
     }
   } catch (e) {
     console.error("gamification error:", e);
-    return json({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
+    return json({ error: e instanceof Error ? e.message : "Internal error" }, 500);
   }
 });
-
-function json(data: any, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}

@@ -33,7 +33,6 @@ export default function Challenge30Page() {
 
   const startChallenge = () => {
     const qs = shuffleArray(SAMPLE_QUESTIONS_BY_SUBJECT[subject] || []);
-    // Duplicate questions to have enough for 30s
     const extendedQs = [...qs, ...shuffleArray(qs), ...shuffleArray(qs)];
     setQuestions(extendedQs);
     setCurrentQ(0);
@@ -50,7 +49,8 @@ export default function Challenge30Page() {
       setFinished(true);
       setPlaying(false);
       if (userKey) {
-        addXP(userKey, score * 15 + 10, "challenge_30s");
+        const xpGained = score * 15 + 10;
+        addXP(userKey, xpGained, "challenge_30s");
       }
       toast({ title: `⚡ Desafio encerrado!`, description: `Você acertou ${score} em 30 segundos!` });
     }
@@ -75,6 +75,7 @@ export default function Challenge30Page() {
 
   if (finished) {
     const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
+    const xpGained = score * 15 + 10;
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -87,7 +88,8 @@ export default function Challenge30Page() {
                 <p className="text-muted-foreground">{subjectName}</p>
                 <div className="text-6xl font-bold text-primary">{score}</div>
                 <p className="text-lg text-muted-foreground">acertos em 30 segundos</p>
-                <div className="text-sm text-muted-foreground">+{score * 15 + 10} XP ganhos</div>
+                <div className="text-sm text-muted-foreground">+{xpGained} XP ganhos</div>
+                {score >= 10 && <Badge className="bg-yellow-500/20 text-yellow-600">🏆 Badge: Veloz!</Badge>}
                 <div className="flex gap-3 justify-center pt-4">
                   <Button onClick={startChallenge} size="lg">Tentar de Novo</Button>
                   <Button variant="outline" onClick={() => setFinished(false)}>Trocar Matéria</Button>
@@ -110,6 +112,9 @@ export default function Challenge30Page() {
           <div className="flex justify-between items-center mb-4">
             <Badge variant={timeLeft <= 10 ? "destructive" : "outline"} className="text-lg gap-1 px-3 py-1">
               <Timer className="h-4 w-4" />{timeLeft}s
+            </Badge>
+            <Badge variant="outline" className="text-sm">
+              {ALL_SUBJECTS.find(s => s.id === subject)?.name}
             </Badge>
             <Badge className="text-lg gap-1 px-3 py-1">
               <Trophy className="h-4 w-4" />{score}

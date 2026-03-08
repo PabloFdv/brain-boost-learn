@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Header from "@/components/Header";
-import { useProfile, useBrainMap, useDailyMissions, useErrors, useUserKey, getGradePrediction, updateProfile } from "@/hooks/useGamification";
+import { useProfile, useBrainMap, useDailyMissions, useErrors, useBadges, useUserKey, getGradePrediction, updateProfile, BadgeData } from "@/hooks/useGamification";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Flame, Trophy, Brain, Target, Zap, BookOpen, Swords, Timer, TrendingUp, AlertTriangle, Sparkles, GraduationCap, Pencil, Check, X, Users, School } from "lucide-react";
+import { Flame, Trophy, Brain, Target, Zap, BookOpen, Swords, Timer, TrendingUp, AlertTriangle, Sparkles, GraduationCap, Pencil, Check, X, Users, School, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TURMAS, ALL_SUBJECTS } from "@/lib/constants";
 
@@ -37,12 +37,14 @@ export default function StudentDashboard() {
   const { topics: brainTopics, loading: brainLoading } = useBrainMap();
   const { missions, loading: missionsLoading } = useDailyMissions();
   const { errors, loading: errorsLoading } = useErrors();
+  const { badges, loading: badgesLoading } = useBadges();
   const userKey = useUserKey();
   const { toast } = useToast();
   const [predictions, setPredictions] = useState<any[]>([]);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
   const [editingTurma, setEditingTurma] = useState(false);
+  const [showAllBadges, setShowAllBadges] = useState(false);
 
   useEffect(() => {
     if (userKey) {
@@ -92,9 +94,33 @@ export default function StudentDashboard() {
   const missionsList = missions?.missions || [];
   const completedMissions = (missionsList as any[]).filter((m: any) => m.current >= m.target).length;
 
-  // Detect talents
   const strongTopics = brainTopics.filter(t => t.mastery_percent >= 80);
-  const weakTopics = brainTopics.filter(t => t.mastery_percent < 40);
+
+  // All possible badges for display
+  const ALL_BADGES = [
+    { id: "first_correct", name: "Primeiro Acerto", icon: "✅", desc: "Acertar a primeira questão" },
+    { id: "xp_100", name: "Centurião", icon: "💯", desc: "Alcançar 100 XP" },
+    { id: "xp_500", name: "Meio Milhar", icon: "⚡", desc: "Alcançar 500 XP" },
+    { id: "xp_1000", name: "Mil XP", icon: "🔥", desc: "Alcançar 1000 XP" },
+    { id: "xp_5000", name: "Lenda", icon: "👑", desc: "Alcançar 5000 XP" },
+    { id: "streak_3", name: "Consistente", icon: "🔥", desc: "3 dias seguidos" },
+    { id: "streak_7", name: "Dedicado", icon: "🌟", desc: "7 dias seguidos" },
+    { id: "streak_30", name: "Mestre do Hábito", icon: "💎", desc: "30 dias seguidos" },
+    { id: "battle_won", name: "Guerreiro", icon: "⚔️", desc: "Vencer uma batalha" },
+    { id: "battle_5", name: "Gladiador", icon: "🏛️", desc: "Vencer 5 batalhas" },
+    { id: "perfect_sim", name: "Simulado Perfeito", icon: "🎯", desc: "100% num simulado" },
+    { id: "challenge30_10", name: "Veloz", icon: "⚡", desc: "10+ no Desafio 30s" },
+    { id: "level_5", name: "Estudante Dedicado", icon: "📚", desc: "Alcançar nível 5" },
+    { id: "level_10", name: "Mestre da Turma", icon: "🏆", desc: "Alcançar nível 10" },
+    { id: "level_20", name: "Gênio da Escola", icon: "🧠", desc: "Alcançar nível 20" },
+    { id: "first_battle", name: "Desafiante", icon: "🥊", desc: "Primeira batalha" },
+    { id: "study_60min", name: "Hora de Estudo", icon: "⏰", desc: "60 min estudados" },
+    { id: "study_300min", name: "Maratonista", icon: "🏃", desc: "5 horas estudadas" },
+    { id: "errors_resolved_10", name: "Aprendiz", icon: "🔄", desc: "Resolver 10 erros" },
+    { id: "mastery_topic", name: "Especialista", icon: "⭐", desc: "Dominar um tópico (90%+)" },
+  ];
+
+  const earnedIds = new Set(badges.map(b => b.badge_id));
 
   return (
     <div className="min-h-screen bg-background">
@@ -177,12 +203,12 @@ export default function StudentDashboard() {
         {/* Quick Actions */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           {[
-            { icon: Zap, label: "Estudo Rápido", desc: "3 questões", href: "/auto-study?mode=quick", color: "text-yellow-500" },
+            { icon: Zap, label: "Desafio 30s", desc: "Raciocínio rápido", href: "/challenge30", color: "text-yellow-500" },
             { icon: Swords, label: "Batalha", desc: "PvP", href: "/battle", color: "text-red-500" },
-            { icon: Target, label: "Simulado", desc: "Prova", href: "/simulator", color: "text-blue-500" },
-            { icon: AlertTriangle, label: "Lab Erros", desc: "Revisar", href: "/error-lab", color: "text-orange-500" },
-            { icon: Timer, label: "Foco", desc: "Timer", href: "/focus", color: "text-purple-500" },
-            { icon: Brain, label: "Lab Mental", desc: "Treino", href: "/mental-lab", color: "text-pink-500" },
+            { icon: Target, label: "Simulado", desc: "Modo prova", href: "/simulator", color: "text-blue-500" },
+            { icon: AlertTriangle, label: "Lab Erros", desc: "Revisar erros", href: "/error-lab", color: "text-orange-500" },
+            { icon: Timer, label: "Foco", desc: "Pomodoro", href: "/focus", color: "text-purple-500" },
+            { icon: Brain, label: "Lab Mental", desc: "Treino cerebral", href: "/mental-lab", color: "text-pink-500" },
           ].map((action, i) => (
             <motion.div key={action.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
               <Link to={action.href}>
@@ -199,6 +225,42 @@ export default function StudentDashboard() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
+          {/* Badges / Conquistas */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <Card className="border-yellow-500/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Award className="h-5 w-5 text-yellow-500" />
+                  Conquistas
+                  <Badge variant="outline" className="ml-auto">{badges.length}/{ALL_BADGES.length}</Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-5 gap-2">
+                  {(showAllBadges ? ALL_BADGES : ALL_BADGES.slice(0, 10)).map(b => {
+                    const earned = earnedIds.has(b.id);
+                    return (
+                      <motion.div
+                        key={b.id}
+                        whileHover={{ scale: 1.1 }}
+                        className={`flex flex-col items-center gap-0.5 p-2 rounded-lg text-center cursor-default transition-all ${earned ? "bg-yellow-500/10" : "bg-muted/30 opacity-40 grayscale"}`}
+                        title={`${b.name}: ${b.desc}`}
+                      >
+                        <span className="text-2xl">{b.icon}</span>
+                        <span className="text-[9px] font-medium leading-tight">{b.name}</span>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+                {ALL_BADGES.length > 10 && (
+                  <Button variant="ghost" size="sm" className="w-full mt-2 text-xs" onClick={() => setShowAllBadges(!showAllBadges)}>
+                    {showAllBadges ? "Mostrar menos" : `Ver todas (${ALL_BADGES.length})`}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+
           {/* Daily Missions */}
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
             <Card>

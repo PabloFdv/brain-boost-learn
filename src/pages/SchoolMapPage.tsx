@@ -9,8 +9,19 @@ import { Progress } from "@/components/ui/progress";
 import { Brain, TrendingDown, TrendingUp, School } from "lucide-react";
 import { ALL_SUBJECTS } from "@/lib/constants";
 
+const GRADES = [
+  { id: "6ano", name: "6º Ano" },
+  { id: "7ano", name: "7º Ano" },
+  { id: "8ano", name: "8º Ano" },
+  { id: "9ano", name: "9º Ano" },
+  { id: "1em", name: "1º Ano EM" },
+  { id: "2em", name: "2º Ano EM" },
+  { id: "3em", name: "3º Ano EM" },
+];
+
 export default function SchoolMapPage() {
   const [subject, setSubject] = useState("matematica");
+  const [grade, setGrade] = useState("1em");
   const [classBrain, setClassBrain] = useState<any[]>([]);
   const [examRadar, setExamRadar] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,13 +29,13 @@ export default function SchoolMapPage() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      callGamification("get_class_brain", { grade: "9ano", subject }),
-      callGamification("get_exam_radar", { grade: "9ano", subject }),
+      callGamification("get_class_brain", { grade, subject }),
+      callGamification("get_exam_radar", { grade, subject }),
     ]).then(([brain, radar]) => {
       setClassBrain(brain.topics || []);
       setExamRadar(radar.radar || []);
     }).catch(console.error).finally(() => setLoading(false));
-  }, [subject]);
+  }, [subject, grade]);
 
   const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
 
@@ -40,18 +51,25 @@ export default function SchoolMapPage() {
           <p className="text-muted-foreground mt-1">Mapa coletivo de dificuldades e previsões de prova</p>
         </motion.div>
 
-        <Select value={subject} onValueChange={setSubject}>
-          <SelectTrigger className="max-w-64"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-3 flex-wrap">
+          <Select value={grade} onValueChange={setGrade}>
+            <SelectTrigger className="max-w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {GRADES.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={subject} onValueChange={setSubject}>
+            <SelectTrigger className="max-w-48"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {ALL_SUBJECTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
 
         {loading ? (
           <Card><CardContent className="p-8 text-center text-muted-foreground">Carregando dados...</CardContent></Card>
         ) : (
           <>
-            {/* Class Brain Map */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -88,7 +106,6 @@ export default function SchoolMapPage() {
               </CardContent>
             </Card>
 
-            {/* Exam Radar */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
