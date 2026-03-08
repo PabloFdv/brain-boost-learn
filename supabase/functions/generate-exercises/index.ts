@@ -10,14 +10,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { grade, subject, topic } = await req.json();
+    const { grade, subject, topic, numQuestions } = await req.json();
+    const questionsCount = numQuestions || 5;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
     const systemPrompt = `Você é um professor brasileiro que cria exercícios de múltipla escolha didáticos e precisos para alunos.
 
 REGRAS:
-1. Crie exatamente 5 questões sobre o tema
+1. Crie exatamente ${questionsCount} questões sobre o tema
 2. Cada questão deve ter 4 alternativas (A, B, C, D)
 3. As questões devem cobrir diferentes aspectos do tema
 4. As alternativas erradas devem ser plausíveis (não absurdas)
@@ -37,7 +38,7 @@ REGRAS:
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Crie 5 exercícios de múltipla escolha sobre "${topic}" para ${grade}, disciplina de ${subject}.`,
+            content: `Crie ${questionsCount} exercícios de múltipla escolha sobre "${topic}" para ${grade}, disciplina de ${subject}.`,
           },
         ],
         tools: [
