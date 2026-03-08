@@ -18,6 +18,10 @@ import SimulatorPage from "./pages/SimulatorPage";
 import ErrorLabPage from "./pages/ErrorLabPage";
 import AutoStudyPage from "./pages/AutoStudyPage";
 import FocusPage from "./pages/FocusPage";
+import Challenge30Page from "./pages/Challenge30Page";
+import SchoolMapPage from "./pages/SchoolMapPage";
+import MentalLabPage from "./pages/MentalLabPage";
+import WeeklyGoalsPage from "./pages/WeeklyGoalsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -48,6 +52,10 @@ const AppRoutes = () => (
     <Route path="/error-lab" element={<ProtectedRoute><ErrorLabPage /></ProtectedRoute>} />
     <Route path="/auto-study" element={<ProtectedRoute><AutoStudyPage /></ProtectedRoute>} />
     <Route path="/focus" element={<ProtectedRoute><FocusPage /></ProtectedRoute>} />
+    <Route path="/challenge30" element={<ProtectedRoute><Challenge30Page /></ProtectedRoute>} />
+    <Route path="/school-map" element={<ProtectedRoute><SchoolMapPage /></ProtectedRoute>} />
+    <Route path="/mental-lab" element={<ProtectedRoute><MentalLabPage /></ProtectedRoute>} />
+    <Route path="/goals" element={<ProtectedRoute><WeeklyGoalsPage /></ProtectedRoute>} />
     <Route path="/:gradeId" element={<ProtectedRoute><GradePage /></ProtectedRoute>} />
     <Route path="/:gradeId/:subjectId" element={<ProtectedRoute><SubjectPage /></ProtectedRoute>} />
     <Route path="/:gradeId/:subjectId/:topic" element={<ProtectedRoute><LessonPage /></ProtectedRoute>} />
