@@ -331,6 +331,36 @@ export type Database = {
         }
         Relationships: []
       }
+      student_badges: {
+        Row: {
+          badge_description: string
+          badge_icon: string
+          badge_id: string
+          badge_name: string
+          earned_at: string
+          id: string
+          user_key: string
+        }
+        Insert: {
+          badge_description?: string
+          badge_icon?: string
+          badge_id: string
+          badge_name: string
+          earned_at?: string
+          id?: string
+          user_key: string
+        }
+        Update: {
+          badge_description?: string
+          badge_icon?: string
+          badge_id?: string
+          badge_name?: string
+          earned_at?: string
+          id?: string
+          user_key?: string
+        }
+        Relationships: []
+      }
       student_errors: {
         Row: {
           correct_answer: string | null

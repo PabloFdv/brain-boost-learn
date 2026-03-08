@@ -36,6 +36,16 @@ export interface StudentProfile {
   turma: string | null;
 }
 
+export interface BadgeData {
+  id: string;
+  user_key: string;
+  badge_id: string;
+  badge_name: string;
+  badge_icon: string;
+  badge_description: string;
+  earned_at: string;
+}
+
 export function useProfile() {
   const userKey = useUserKey();
   const { name } = useAuth();
@@ -57,6 +67,22 @@ export function useProfile() {
   useEffect(() => { refresh(); }, [refresh]);
 
   return { profile, loading, refresh, setProfile };
+}
+
+export function useBadges() {
+  const userKey = useUserKey();
+  const [badges, setBadges] = useState<BadgeData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userKey) return;
+    callGamification("get_badges", { user_key: userKey })
+      .then(r => setBadges(r.badges || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [userKey]);
+
+  return { badges, loading };
 }
 
 export function useRanking(turma?: string) {
