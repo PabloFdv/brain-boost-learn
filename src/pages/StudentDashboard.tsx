@@ -250,7 +250,49 @@ export default function StudentDashboard() {
           </Card>
         </motion.div>
 
-        {/* Daily Chest */}
+        {/* Notification Panel Overlay */}
+        <AnimatePresence>
+          {showNotifs && (
+            <>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
+                onClick={() => setShowNotifs(false)}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="fixed top-14 left-3 right-3 sm:left-auto sm:right-6 sm:w-80 z-50 bg-card border border-border rounded-xl shadow-2xl max-h-[70vh] overflow-y-auto"
+              >
+                <div className="p-3 border-b border-border flex items-center justify-between">
+                  <span className="text-sm font-semibold">Notificações</span>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setShowNotifs(false)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-sm text-muted-foreground text-center">Tudo em dia! ✅</div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {notifications.map((n, i) => (
+                      <div key={i} className="p-3 flex items-start gap-2.5 hover:bg-muted/50 transition-colors">
+                        <span className="text-lg shrink-0">{n.icon}</span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium">{n.title}</div>
+                          <div className="text-xs text-muted-foreground">{n.desc}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 }}>
           <Card className={`border-2 transition-all ${hasChestNotif ? "border-yellow-500/50 bg-gradient-to-r from-yellow-500/5 to-amber-500/5" : "border-border"}`}>
             <CardContent className="p-4 sm:p-5">
