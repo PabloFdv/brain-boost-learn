@@ -38,7 +38,7 @@ REGRAS:
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Crie 5 exercícios de múltipla escolha sobre "${topic}" para ${grade}, disciplina de ${subject}.`,
+            content: `Crie ${questionsCount} exercícios de múltipla escolha sobre "${topic}" para ${grade}, disciplina de ${subject}.`,
           },
         ],
         tools: [
