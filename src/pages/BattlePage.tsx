@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Swords, Trophy, Clock, Users, Trash2, Loader2, Play } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_SUBJECTS, GRADES, SAMPLE_QUESTIONS_BY_SUBJECT } from "@/lib/constants";
+import { ALL_SUBJECTS, GRADES, getQuestionsForGradeSubject } from "@/lib/constants";
+import AnswerFeedback, { playFeedbackSound } from "@/components/AnswerFeedback";
 
 function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: string; onFinish: () => void }) {
   const { toast } = useToast();
@@ -16,6 +17,7 @@ function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: strin
   const [score, setScore] = useState(0);
   const [answered, setAnswered] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ show: boolean; correct: boolean }>({ show: false, correct: false });
   const questions = battle.questions || [];
   const q = questions[currentQ];
 
@@ -31,7 +33,12 @@ function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: strin
     const newScore = isCorrect ? score + 1 : score;
     if (isCorrect) setScore(newScore);
 
+    // Show feedback
+    setFeedback({ show: true, correct: isCorrect });
+    playFeedbackSound(isCorrect);
+
     setTimeout(() => {
+      setFeedback({ show: false, correct: false });
       if (currentQ + 1 < questions.length) {
         setCurrentQ(c => c + 1);
         setAnswered(false);
@@ -41,11 +48,12 @@ function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: strin
         toast({ title: "⚔️ Batalha finalizada!", description: `Você acertou ${newScore}/${questions.length}` });
         onFinish();
       }
-    }, 1000);
+    }, 800);
   };
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-xl">
+      <AnswerFeedback show={feedback.show} correct={feedback.correct} />
       <div className="flex justify-between items-center mb-4">
         <Badge variant="outline">{subjectName}</Badge>
         <Badge variant="outline">Q {currentQ + 1}/{questions.length}</Badge>
@@ -56,14 +64,24 @@ function BattlePlay({ battle, userKey, onFinish }: { battle: any; userKey: strin
           <CardContent className="p-4 sm:p-6">
             <h2 className="text-lg sm:text-xl font-bold mb-4 sm:mb-6">{q.q}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {q.options.map((opt: string) => (
-                <Button key={opt}
-                  variant={answered ? (opt === q.correct ? "default" : opt === selectedAnswer ? "destructive" : "outline") : "outline"}
-                  className="h-12 sm:h-14 text-sm sm:text-base whitespace-normal" onClick={() => handleAnswer(opt)} disabled={answered}
-                >
-                  {opt}
-                </Button>
-              ))}
+              {q.options.map((opt: string) => {
+                let variant: "outline" | "default" | "destructive" = "outline";
+                if (answered) {
+                  if (opt === q.correct) variant = "default";
+                  else if (opt === selectedAnswer) variant = "destructive";
+                }
+                return (
+                  <Button key={opt}
+                    variant={variant}
+                    className={`h-12 sm:h-14 text-sm sm:text-base whitespace-normal transition-all ${
+                      answered && opt === q.correct ? "ring-2 ring-green-500 bg-green-500/10" : ""
+                    } ${answered && opt === selectedAnswer && opt !== q.correct ? "ring-2 ring-red-500 bg-red-500/10" : ""}`}
+                    onClick={() => handleAnswer(opt)} disabled={answered}
+                  >
+                    {opt}
+                  </Button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -96,16 +114,17 @@ export default function BattlePage() {
     if (!userKey || !profile) return;
     setCreating(true);
     try {
-      const questions = SAMPLE_QUESTIONS_BY_SUBJECT[subject];
+      const questions = getQuestionsForGradeSubject(grade, subject);
       if (!questions || questions.length === 0) {
-        toast({ title: "Sem questões para essa matéria", variant: "destructive" });
+        toast({ title: "Sem questões para essa combinação", variant: "destructive" });
         setCreating(false);
         return;
       }
       const res = await createBattle(userKey, profile.display_name, subject, questions);
       setBattles(prev => [res.battle, ...prev]);
       const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
-      toast({ title: "⚔️ Batalha criada!", description: `${subjectName} — Aguardando oponente...` });
+      const gradeName = GRADES.find(g => g.id === grade)?.name || grade;
+      toast({ title: "⚔️ Batalha criada!", description: `${subjectName} (${gradeName}) — Aguardando oponente...` });
     } catch {
       toast({ title: "Erro", description: "Falha ao criar batalha", variant: "destructive" });
     }
