@@ -207,7 +207,7 @@ export default function StudentDashboard() {
             { icon: Swords, label: "Batalha", desc: "PvP", href: "/battle", color: "text-red-500" },
             { icon: Target, label: "Simulado", desc: "Modo prova", href: "/simulator", color: "text-blue-500" },
             { icon: AlertTriangle, label: "Lab Erros", desc: "Revisar erros", href: "/error-lab", color: "text-orange-500" },
-            { icon: Timer, label: "Foco", desc: "Pomodoro", href: "/focus", color: "text-purple-500" },
+            { icon: Bell, label: "Provas", desc: "Radar & Revisão", href: "/exam-alert", color: "text-orange-500" },
             { icon: Brain, label: "Lab Mental", desc: "Treino cerebral", href: "/mental-lab", color: "text-pink-500" },
           ].map((action, i) => (
             <motion.div key={action.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>

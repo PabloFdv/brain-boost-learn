@@ -1,3 +1,13 @@
+export const GRADES = [
+  { id: "6ano", name: "6º Ano" },
+  { id: "7ano", name: "7º Ano" },
+  { id: "8ano", name: "8º Ano" },
+  { id: "9ano", name: "9º Ano" },
+  { id: "1em", name: "1º Ano EM" },
+  { id: "2em", name: "2º Ano EM" },
+  { id: "3em", name: "3º Ano EM" },
+];
+
 export const TURMAS = [
   "1º ano - 929 - Automação",
   "1º ano - 930 - Des. de Sistema",
