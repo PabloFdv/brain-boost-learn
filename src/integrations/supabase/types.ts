@@ -190,6 +190,42 @@ export type Database = {
           },
         ]
       }
+      global_keys: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          current_uses: number
+          expires_at: string | null
+          id: string
+          key: string
+          label: string
+          max_uses: number | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          current_uses?: number
+          expires_at?: string | null
+          id?: string
+          key: string
+          label?: string
+          max_uses?: number | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          current_uses?: number
+          expires_at?: string | null
+          id?: string
+          key?: string
+          label?: string
+          max_uses?: number | null
+        }
+        Relationships: []
+      }
       lessons: {
         Row: {
           content: string
