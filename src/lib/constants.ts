@@ -46,6 +46,20 @@ export const ALL_SUBJECTS = [
   { id: "educacao-fisica", name: "Ed. Física" },
 ];
 
+// FIRJAN SENAI technical subjects
+export const TECHNICAL_SUBJECTS = [
+  { id: "automacao", name: "Automação Industrial" },
+  { id: "dev-sistemas", name: "Des. de Sistemas" },
+  { id: "mecatronica", name: "Mecatrônica" },
+  { id: "mecanica", name: "Mecânica" },
+  { id: "edificacoes", name: "Edificações" },
+  { id: "eletromec", name: "Eletromecânica" },
+  { id: "iot", name: "IoT" },
+];
+
+// Combined subjects (all + technical)
+export const ALL_SUBJECTS_WITH_TECHNICAL = [...ALL_SUBJECTS, ...TECHNICAL_SUBJECTS];
+
 // Grade-specific questions with difficulty progression
 type Question = { q: string; options: string[]; correct: string };
 
