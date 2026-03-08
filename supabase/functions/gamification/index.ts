@@ -59,9 +59,14 @@ async function checkAndAwardBadges(sb: any, userKey: string, context?: Record<st
     if (has.has(id)) return;
     const def = BADGE_DEFS[id];
     if (!def) return;
-    await sb.from("student_badges").insert({ user_key: userKey, badge_id: id, badge_name: def.name, badge_icon: def.icon, badge_description: def.description }).onConflict("user_key,badge_id").ignore();
-    awarded.push(id);
-    has.add(id);
+    const { error } = await sb.from("student_badges").upsert(
+      { user_key: userKey, badge_id: id, badge_name: def.name, badge_icon: def.icon, badge_description: def.description },
+      { onConflict: "user_key,badge_id", ignoreDuplicates: true }
+    );
+    if (!error) {
+      awarded.push(id);
+      has.add(id);
+    }
   }
 
   const { data: profile } = await sb.from("student_profiles").select("*").eq("user_key", userKey).maybeSingle();
