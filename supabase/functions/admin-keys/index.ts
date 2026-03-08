@@ -23,7 +23,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, adminKey, keyId, label, expiresAt, maxUses, keyValue } = body;
+    const { action, adminKey, keyId, label, expiresAt, maxUses, keyValue, turma } = body;
 
     if (adminKey !== ADMIN_PASSWORD) {
       return new Response(JSON.stringify({ error: "Acesso negado" }), {
@@ -56,11 +56,25 @@ serve(async (req) => {
       }
 
       case "generate_global": {
-        const gKey = keyValue || generateKey(10);
+        // Auto-generate password based on turma if no custom key
+        let gKey = keyValue;
+        if (!gKey) {
+          // Generate a friendly key from turma abbreviation
+          if (turma) {
+            const parts = turma.split(" - ");
+            const num = parts[1] || "";
+            const suffix = generateKey(4);
+            gKey = `${num}${suffix}`.toUpperCase();
+          } else {
+            gKey = generateKey(10);
+          }
+        }
+        
         const insert: any = {
           key: gKey,
-          label: label || "Key Global",
+          label: label || (turma ? `Key ${turma}` : "Key Global"),
           created_by: "Pablo Martins Santana",
+          turma: turma || null,
         };
         if (expiresAt) insert.expires_at = expiresAt;
         if (maxUses) insert.max_uses = maxUses;

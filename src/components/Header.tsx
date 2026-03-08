@@ -26,8 +26,16 @@ const Header = () => {
   const mobileExtraItems = [
     { href: "/mental-lab", icon: Brain, label: "Lab Mental" },
     { href: "/school-map", icon: School, label: "Mapa Escola" },
-    { href: "/error-lab", icon: FlaskConical, label: "Lab de Erros" },
-    { href: "/goals", icon: Target, label: "Metas Semanais" },
+    { href: "/error-lab", icon: FlaskConical, label: "Lab Erros" },
+    { href: "/goals", icon: Target, label: "Metas" },
+  ];
+
+  // Bottom nav for mobile (most important items)
+  const bottomNavItems = [
+    { href: "/", icon: Home, label: "Início" },
+    { href: "/dashboard", icon: LayoutDashboard, label: "Painel" },
+    { href: "/challenge30", icon: Zap, label: "30s" },
+    { href: "/chat", icon: MessageCircle, label: "Prof. IA" },
   ];
 
   const isActive = (href: string) => location.pathname === href;
@@ -39,10 +47,10 @@ const Header = () => {
         animate={{ y: 0, opacity: 1 }}
         className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-lg"
       >
-        <div className="container mx-auto flex h-14 items-center justify-between px-4">
+        <div className="container mx-auto flex h-12 sm:h-14 items-center justify-between px-3 sm:px-4">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <BookOpen className="h-4 w-4 text-primary-foreground" />
+            <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-primary">
+              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary-foreground" />
             </div>
             <span className="text-sm sm:text-base font-bold font-display tracking-tight text-foreground group-hover:text-primary transition-colors hidden sm:block">
               EPISTEMOLOGIA
@@ -88,50 +96,94 @@ const Header = () => {
         </div>
       </motion.header>
 
-      {/* Mobile Menu */}
+      {/* Mobile Slide Menu */}
       <AnimatePresence>
         {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="fixed inset-x-0 top-14 z-40 bg-card/95 backdrop-blur-lg border-b border-border lg:hidden max-h-[80vh] overflow-y-auto"
-          >
-            <nav className="container mx-auto px-4 py-3 grid grid-cols-2 gap-1">
-              {!isHome && (
-                <Link to="/" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted col-span-2">
-                  <Home className="h-4 w-4" /> Início
-                </Link>
-              )}
-              {navItems.map(item => (
-                <Link key={item.href} to={item.href} onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  <item.icon className="h-4 w-4" /> {item.label}
-                </Link>
-              ))}
-              {mobileExtraItems.map(item => (
-                <Link key={item.href} to={item.href} onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  <item.icon className="h-4 w-4" /> {item.label}
-                </Link>
-              ))}
-              {role === "admin" && (
-                <Link to="/admin" onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-primary col-span-2">
-                  Admin
-                </Link>
-              )}
-              <button onClick={() => { logout(); setMobileOpen(false); }}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 col-span-2">
-                <LogOut className="h-4 w-4" /> Sair
-              </button>
-            </nav>
-          </motion.div>
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden"
+              onClick={() => setMobileOpen(false)}
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 z-50 w-64 bg-card border-l border-border lg:hidden overflow-y-auto"
+            >
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <span className="font-bold font-display text-sm">Menu</span>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setMobileOpen(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <nav className="p-2 space-y-0.5">
+                {!isHome && (
+                  <Link to="/" onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+                    <Home className="h-4 w-4" /> Início
+                  </Link>
+                )}
+                {navItems.map(item => (
+                  <Link key={item.href} to={item.href} onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  >
+                    <item.icon className="h-4 w-4" /> {item.label}
+                  </Link>
+                ))}
+                <div className="border-t border-border my-2" />
+                {mobileExtraItems.map(item => (
+                  <Link key={item.href} to={item.href} onClick={() => setMobileOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive(item.href) ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                  >
+                    <item.icon className="h-4 w-4" /> {item.label}
+                  </Link>
+                ))}
+                {role === "admin" && (
+                  <>
+                    <div className="border-t border-border my-2" />
+                    <Link to="/admin" onClick={() => setMobileOpen(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-primary">
+                      Admin
+                    </Link>
+                  </>
+                )}
+                <div className="border-t border-border my-2" />
+                <button onClick={() => { logout(); setMobileOpen(false); }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 w-full transition-colors">
+                  <LogOut className="h-4 w-4" /> Sair
+                </button>
+              </nav>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
+
+      {/* Mobile Bottom Navigation */}
+      {isAuthenticated && (
+        <nav className="fixed bottom-0 inset-x-0 z-40 bg-card/95 backdrop-blur-lg border-t border-border lg:hidden safe-area-pb">
+          <div className="flex items-center justify-around h-14">
+            {bottomNavItems.map(item => (
+              <Link key={item.href} to={item.href}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${isActive(item.href) ? "text-primary" : "text-muted-foreground"}`}
+              >
+                <item.icon className={`h-5 w-5 ${isActive(item.href) ? "text-primary" : ""}`} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            ))}
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg text-muted-foreground"
+            >
+              <Menu className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Mais</span>
+            </button>
+          </div>
+        </nav>
+      )}
     </>
   );
 };
