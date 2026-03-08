@@ -229,45 +229,14 @@ export default function StudentDashboard() {
                     <div className="text-[10px] sm:text-sm text-muted-foreground">{profile?.total_study_minutes || 0} min estudados</div>
                   </div>
                   {/* Notification bell */}
-                  <div className="relative">
-                    <Button size="icon" variant="ghost" className="h-9 w-9 relative" onClick={() => setShowNotifs(!showNotifs)}>
-                      <Bell className="h-5 w-5" />
-                      {unreadNotifs > 0 && (
-                        <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground rounded-full text-[9px] flex items-center justify-center font-bold">
-                          {unreadNotifs}
-                        </span>
-                      )}
-                    </Button>
-                    <AnimatePresence>
-                      {showNotifs && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.9, y: -5 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, y: -5 }}
-                          className="absolute right-0 top-11 w-72 sm:w-80 bg-card border border-border rounded-xl shadow-xl z-50 max-h-80 overflow-y-auto"
-                        >
-                          <div className="p-3 border-b border-border">
-                            <span className="text-sm font-semibold">Notificações</span>
-                          </div>
-                          {notifications.length === 0 ? (
-                            <div className="p-4 text-sm text-muted-foreground text-center">Tudo em dia! ✅</div>
-                          ) : (
-                            <div className="divide-y divide-border">
-                              {notifications.map((n, i) => (
-                                <div key={i} className="p-3 flex items-start gap-2.5 hover:bg-muted/50 transition-colors">
-                                  <span className="text-lg shrink-0">{n.icon}</span>
-                                  <div className="min-w-0">
-                                    <div className="text-sm font-medium">{n.title}</div>
-                                    <div className="text-xs text-muted-foreground">{n.desc}</div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                  <Button size="icon" variant="ghost" className="h-9 w-9 relative" onClick={() => setShowNotifs(!showNotifs)}>
+                    <Bell className="h-5 w-5" />
+                    {unreadNotifs > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-destructive text-destructive-foreground rounded-full text-[9px] flex items-center justify-center font-bold">
+                        {unreadNotifs}
+                      </span>
+                    )}
+                  </Button>
                 </div>
               </div>
               <div className="mt-3 sm:mt-4">
