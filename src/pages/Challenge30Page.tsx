@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Zap, Trophy, Timer } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ALL_SUBJECTS, GRADES, SAMPLE_QUESTIONS_BY_SUBJECT } from "@/lib/constants";
+import { ALL_SUBJECTS, GRADES, getQuestionsForGradeSubject } from "@/lib/constants";
+import AnswerFeedback, { playFeedbackSound } from "@/components/AnswerFeedback";
 
 function shuffleArray<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -30,11 +31,16 @@ export default function Challenge30Page() {
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(30);
   const [finished, setFinished] = useState(false);
+  const [feedback, setFeedback] = useState<{ show: boolean; correct: boolean }>({ show: false, correct: false });
   const timerRef = useRef<number | null>(null);
 
   const startChallenge = () => {
-    const qs = shuffleArray(SAMPLE_QUESTIONS_BY_SUBJECT[subject] || []);
-    const extendedQs = [...qs, ...shuffleArray(qs), ...shuffleArray(qs)];
+    const qs = getQuestionsForGradeSubject(grade, subject);
+    if (qs.length === 0) {
+      toast({ title: "Sem questões disponíveis para essa combinação", variant: "destructive" });
+      return;
+    }
+    const extendedQs = [...shuffleArray(qs), ...shuffleArray(qs), ...shuffleArray(qs)];
     setQuestions(extendedQs);
     setCurrentQ(0);
     setScore(0);
@@ -59,23 +65,33 @@ export default function Challenge30Page() {
   }, [playing, timeLeft]);
 
   const handleAnswer = (answer: string) => {
-    if (!playing) return;
+    if (!playing || feedback.show) return;
     const q = questions[currentQ];
     const correct = answer === q.correct;
     if (correct) setScore(s => s + 1);
+    
+    // Show feedback
+    setFeedback({ show: true, correct });
+    playFeedbackSound(correct);
+    
     if (userKey) {
       recordAnswer(userKey, { grade, subject, topic: "desafio-30s", correct, question_text: q.q });
     }
-    if (currentQ + 1 < questions.length) {
-      setCurrentQ(c => c + 1);
-    } else {
-      setFinished(true);
-      setPlaying(false);
-    }
+    
+    setTimeout(() => {
+      setFeedback({ show: false, correct: false });
+      if (currentQ + 1 < questions.length) {
+        setCurrentQ(c => c + 1);
+      } else {
+        setFinished(true);
+        setPlaying(false);
+      }
+    }, 400);
   };
 
   if (finished) {
     const subjectName = ALL_SUBJECTS.find(s => s.id === subject)?.name || subject;
+    const gradeName = GRADES.find(g => g.id === grade)?.name || grade;
     const xpGained = score * 15 + 10;
     return (
       <div className="min-h-screen bg-background">
@@ -86,7 +102,7 @@ export default function Challenge30Page() {
               <CardContent className="p-6 sm:p-8 space-y-4">
                 <div className="text-5xl sm:text-6xl">⚡</div>
                 <h2 className="text-2xl sm:text-3xl font-bold">Desafio 30s</h2>
-                <p className="text-muted-foreground">{subjectName}</p>
+                <p className="text-muted-foreground">{subjectName} • {gradeName}</p>
                 <div className="text-5xl sm:text-6xl font-bold text-primary">{score}</div>
                 <p className="text-base sm:text-lg text-muted-foreground">acertos em 30 segundos</p>
                 <div className="text-sm text-muted-foreground">+{xpGained} XP ganhos</div>
@@ -110,6 +126,7 @@ export default function Challenge30Page() {
     return (
       <div className="min-h-screen bg-background">
         <Header />
+        <AnswerFeedback show={feedback.show} correct={feedback.correct} />
         <div className="container mx-auto p-4 md:p-6 max-w-xl">
           {/* Timer bar */}
           <div className="h-1.5 bg-muted rounded-full mb-4 overflow-hidden">
