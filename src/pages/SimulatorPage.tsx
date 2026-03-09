@@ -237,7 +237,7 @@ export default function SimulatorPage() {
   const technicalSubjects = ALL_SUBJECTS_WITH_TECHNICAL.filter(s => ["automacao","dev-sistemas","mecatronica","mecanica","edificacoes","eletromec","iot"].includes(s.id));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
