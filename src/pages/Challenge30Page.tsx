@@ -168,7 +168,7 @@ export default function Challenge30Page() {
                     {loadingQuestions ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
                     Tentar de Novo
                   </Button>
-                  <Button variant="outline" onClick={() => setFinished(false)}>Trocar Matéria</Button>
+                  <Button variant="outline" onClick={() => { setFinished(false); setQuestions([]); setAnsweredQuestions([]); }}>Trocar Matéria</Button>
                   {answeredQuestions.length > 0 && (
                     <Button variant="outline" onClick={() => setShowReview(r => !r)}>
                       <BookOpen className="h-4 w-4 mr-2" />
