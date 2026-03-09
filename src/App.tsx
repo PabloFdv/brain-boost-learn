@@ -23,6 +23,7 @@ import SchoolMapPage from "./pages/SchoolMapPage";
 import MentalLabPage from "./pages/MentalLabPage";
 import WeeklyGoalsPage from "./pages/WeeklyGoalsPage";
 import ExamAlertPage from "./pages/ExamAlertPage";
+import StudentStatsPage from "./pages/StudentStatsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
