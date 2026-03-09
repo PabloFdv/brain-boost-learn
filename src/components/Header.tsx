@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, Home, MessageCircle, LogOut, Trophy, LayoutDashboard, Swords, Timer, Target, Menu, X, Zap, Brain, School, FlaskConical, AlertTriangle } from "lucide-react";
+import { BookOpen, Home, MessageCircle, LogOut, Trophy, LayoutDashboard, Swords, Timer, Target, Menu, X, Zap, Brain, School, FlaskConical, AlertTriangle, BarChart3 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,12 +18,14 @@ const Header = () => {
     { href: "/challenge30", icon: Zap, label: "30s" },
     { href: "/simulator", icon: Target, label: "Simulado" },
     { href: "/exam-alert", icon: AlertTriangle, label: "Provas" },
+    { href: "/stats", icon: BarChart3, label: "Stats" },
     { href: "/ranking", icon: Trophy, label: "Ranking" },
     { href: "/focus", icon: Timer, label: "Foco" },
     { href: "/chat", icon: MessageCircle, label: "Prof. IA" },
   ];
 
   const mobileExtraItems = [
+    { href: "/stats", icon: BarChart3, label: "Estatísticas" },
     { href: "/mental-lab", icon: Brain, label: "Lab Mental" },
     { href: "/school-map", icon: School, label: "Mapa Escola" },
     { href: "/error-lab", icon: FlaskConical, label: "Lab Erros" },
