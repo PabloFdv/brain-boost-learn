@@ -11,7 +11,7 @@ const Index = () => {
   const specialGrades = grades.filter(g => g.level === "Formação Especial" || g.level === "Formação Técnica");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
 
       {/* Hero */}
