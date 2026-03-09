@@ -100,7 +100,7 @@ export default function SimulatorPage() {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
+        <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-4">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
             <Card className="text-center">
               <CardContent className="p-6 sm:p-8 space-y-4">
@@ -109,38 +109,75 @@ export default function SimulatorPage() {
                 <p className="text-sm text-muted-foreground">{gradeName}</p>
                 <div className="text-4xl sm:text-5xl font-bold text-primary">{gradeScore.toFixed(1)}</div>
                 <div className="text-muted-foreground">Nota estimada</div>
-                {isPerfect && <Badge className="bg-yellow-500/20 text-yellow-600 text-sm">🎯 Badge: Simulado Perfeito!</Badge>}
+                {isPerfect && <Badge variant="secondary">🎯 Simulado Perfeito!</Badge>}
                 <div className="flex justify-center gap-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-500">{totalCorrect}</div>
+                    <div className="text-2xl font-bold text-primary">{totalCorrect}</div>
                     <div className="text-xs text-muted-foreground">Acertos</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-red-500">{questions.length - totalCorrect}</div>
+                    <div className="text-2xl font-bold text-destructive">{questions.length - totalCorrect}</div>
                     <div className="text-xs text-muted-foreground">Erros</div>
                   </div>
                 </div>
-                {/* Show explanation review */}
-                <details className="text-left mt-4">
-                  <summary className="cursor-pointer text-sm text-muted-foreground hover:text-foreground">Ver gabarito e explicações</summary>
-                  <div className="mt-3 space-y-3 max-h-60 overflow-y-auto">
-                    {questions.map((q, i) => {
-                      const a = answers[i];
-                      const correctText = getCorrectAnswer(q);
-                      return (
-                        <div key={i} className={`p-3 rounded-lg border text-sm ${a?.correct ? 'border-green-500/30 bg-green-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
-                          <p className="font-medium">{i+1}. {q.question || q.text}</p>
-                          <p className="text-xs mt-1">✅ {correctText}</p>
-                          {q.explanation && <p className="text-xs mt-1 text-muted-foreground">{q.explanation}</p>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
                 <Button onClick={() => { setQuestions([]); setFinished(false); }} className="mt-4">Novo Simulado</Button>
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Full Gabarito Comentado */}
+          <Card>
+            <CardContent className="p-4 sm:p-6">
+              <h3 className="font-bold text-base flex items-center gap-2 mb-4">
+                📝 Gabarito Comentado ({questions.length} questões)
+              </h3>
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                {questions.map((q, i) => {
+                  const a = answers[i];
+                  const correctText = getCorrectAnswer(q);
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className={`p-3 sm:p-4 rounded-lg border text-sm ${
+                        a?.correct
+                          ? "border-primary/30 bg-primary/5"
+                          : "border-destructive/30 bg-destructive/5"
+                      }`}
+                    >
+                      <div className="flex items-start gap-2 mb-2">
+                        {a?.correct
+                          ? <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          : <span className="text-destructive shrink-0 mt-0.5">❌</span>
+                        }
+                        <p className="font-medium leading-snug">{i + 1}. {q.question || q.text}</p>
+                      </div>
+                      {q.topic_tag && (
+                        <Badge variant="outline" className="text-[10px] mb-2 ml-6">{q.topic_tag}</Badge>
+                      )}
+                      <div className="space-y-1 ml-6">
+                        {!a?.correct && a?.answer && (
+                          <p className="text-xs text-destructive">
+                            ❌ Sua resposta: <span className="font-medium">{a.answer}</span>
+                          </p>
+                        )}
+                        <p className="text-xs text-foreground">
+                          ✅ Correta: <span className="font-medium">{correctText}</span>
+                        </p>
+                        {q.explanation && (
+                          <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
+                            💡 <strong>Explicação:</strong> {q.explanation}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
