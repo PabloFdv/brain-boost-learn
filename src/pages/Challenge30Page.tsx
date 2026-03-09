@@ -205,14 +205,14 @@ export default function Challenge30Page() {
                         transition={{ delay: i * 0.03 }}
                         className={`p-3 sm:p-4 rounded-lg border text-sm ${
                           aq.correct
-                            ? "border-green-500/30 bg-green-500/5"
-                            : "border-red-500/30 bg-red-500/5"
+                            ? "border-green-500/30 bg-green-500/5 dark:bg-green-500/10"
+                            : "border-destructive/30 bg-destructive/5"
                         }`}
                       >
                         <div className="flex items-start gap-2 mb-2">
                           {aq.correct
-                            ? <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                            : <XCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                            ? <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                            : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                           }
                           <p className="font-medium leading-snug">{i + 1}. {aq.question.question}</p>
                         </div>
