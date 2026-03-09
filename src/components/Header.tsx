@@ -18,6 +18,7 @@ const Header = () => {
     { href: "/challenge30", icon: Zap, label: "30s" },
     { href: "/simulator", icon: Target, label: "Simulado" },
     { href: "/exam-alert", icon: AlertTriangle, label: "Provas" },
+    { href: "/stats", icon: BarChart3, label: "Stats" },
     { href: "/ranking", icon: Trophy, label: "Ranking" },
     { href: "/focus", icon: Timer, label: "Foco" },
     { href: "/chat", icon: MessageCircle, label: "Prof. IA" },
