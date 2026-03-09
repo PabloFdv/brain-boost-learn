@@ -211,7 +211,7 @@ export default function Challenge30Page() {
                       >
                         <div className="flex items-start gap-2 mb-2">
                           {aq.correct
-                            ? <CheckCircle className="h-4 w-4 text-green-600 shrink-0 mt-0.5" />
+                             ? <CheckCircle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                             : <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                           }
                           <p className="font-medium leading-snug">{i + 1}. {aq.question.question}</p>
@@ -221,11 +221,11 @@ export default function Challenge30Page() {
                         )}
                         <div className="space-y-1 ml-6">
                           {!aq.correct && (
-                            <p className="text-xs text-red-600">
+                            <p className="text-xs text-destructive">
                               ❌ Sua resposta: <span className="font-medium">{aq.userAnswer}</span>
                             </p>
                           )}
-                          <p className="text-xs text-green-700">
+                          <p className="text-xs text-foreground font-medium">
                             ✅ Resposta correta: <span className="font-medium">{aq.question.correct}</span>
                           </p>
                           {aq.question.explanation && (
