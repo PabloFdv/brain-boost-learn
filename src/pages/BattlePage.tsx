@@ -337,7 +337,7 @@ export default function BattlePage() {
   // Show review screen after battle
   if (reviewData) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <BattleReview
           answeredQuestions={reviewData.answered}
