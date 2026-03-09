@@ -98,7 +98,7 @@ export default function SimulatorPage() {
     const gradeName = GRADES.find(g => g.id === grade)?.name || grade;
     const isPerfect = totalCorrect === questions.length;
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-4">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
@@ -189,7 +189,7 @@ export default function SimulatorPage() {
     const correctText = getCorrectAnswer(q);
     const progress = ((currentQ) / questions.length) * 100;
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <AnswerFeedback show={feedback.show} correct={feedback.correct} />
         <div className="container mx-auto p-4 md:p-6 max-w-xl">
@@ -237,7 +237,7 @@ export default function SimulatorPage() {
   const technicalSubjects = ALL_SUBJECTS_WITH_TECHNICAL.filter(s => ["automacao","dev-sistemas","mecatronica","mecanica","edificacoes","eletromec","iot"].includes(s.id));
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

@@ -146,7 +146,7 @@ export default function Challenge30Page() {
     const totalAnswered = answeredQuestions.length;
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-4">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}>
@@ -168,7 +168,7 @@ export default function Challenge30Page() {
                     {loadingQuestions ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
                     Tentar de Novo
                   </Button>
-                  <Button variant="outline" onClick={() => setFinished(false)}>Trocar Matéria</Button>
+                  <Button variant="outline" onClick={() => { setFinished(false); setQuestions([]); setAnsweredQuestions([]); }}>Trocar Matéria</Button>
                   {answeredQuestions.length > 0 && (
                     <Button variant="outline" onClick={() => setShowReview(r => !r)}>
                       <BookOpen className="h-4 w-4 mr-2" />
@@ -307,7 +307,7 @@ export default function Challenge30Page() {
 
   // Start screen
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>

@@ -218,7 +218,7 @@ const ChatPage = () => {
         </div>
 
         {/* Input area */}
-        <div className="sticky bottom-0 bg-background pt-2 pb-4 border-t border-border">
+        <div className="sticky bottom-0 bg-background pt-2 pb-20 lg:pb-4 border-t border-border">
           {/* Mode indicator */}
           {mode && (
             <div className="flex items-center gap-2 mb-2">

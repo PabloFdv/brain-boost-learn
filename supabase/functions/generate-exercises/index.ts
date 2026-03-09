@@ -386,6 +386,15 @@ function getCurriculumContext(grade: string, subject: string): string {
       "2em": "Arte contemporânea global, performance, instalação, arte conceitual, indústria cultural, comunicação e mídia",
       "3em": "Arte e tecnologia, arte digital, curadoria, mercado de arte, patrimônio cultural, revisão histórica",
     },
+    "educacao-fisica": {
+      "6ano": "Jogos pré-desportivos, habilidades motoras fundamentais, regras do futsal e voleibol, ginástica artística básica, saúde e alimentação",
+      "7ano": "Esportes coletivos (futsal, voleibol, basquete), atletismo básico, ginástica rítmica, capacidades físicas, higiene e saúde",
+      "8ano": "Esportes de rede (vôlei, badminton), táticas de jogos coletivos, atividade física e qualidade de vida, primeiros socorros",
+      "9ano": "Esportes de combate (judô, capoeira), jogos populares e de matriz africana e indígena, fisiologia do exercício básica",
+      "1em": "Sistemas energéticos, treinamento físico, esportes avançados, cultura corporal de movimento, doping e ética no esporte",
+      "2em": "Esportes de aventura, ginástica de academia, saúde coletiva, mídia e esporte, corpo e sociedade",
+      "3em": "Lazer e qualidade de vida, profissões do esporte, avaliação física, cultura corporal brasileira",
+    },
   };
 
   return curriculum[subject]?.[grade] ||

@@ -337,7 +337,7 @@ export default function BattlePage() {
   // Show review screen after battle
   if (reviewData) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <BattleReview
           answeredQuestions={reviewData.answered}
@@ -352,7 +352,7 @@ export default function BattlePage() {
 
   if (playing && userKey) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <BattlePlay battle={playing} userKey={userKey} onFinish={handleBattleFinish} />
       </div>
@@ -360,7 +360,7 @@ export default function BattlePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-2xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
