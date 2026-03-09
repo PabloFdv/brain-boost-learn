@@ -159,9 +159,9 @@ export default function Challenge30Page() {
                 <p className="text-base sm:text-lg text-muted-foreground">
                   acertos de {totalAnswered} tentativas em 30 segundos
                 </p>
-                <div className="text-sm text-muted-foreground font-medium text-green-600">+{xpGained} XP ganhos</div>
-                {score >= 10 && <Badge className="bg-yellow-500/20 text-yellow-600 border-yellow-500/30">🏆 Badge: Veloz!</Badge>}
-                {score >= 15 && <Badge className="bg-purple-500/20 text-purple-600 border-purple-500/30">🚀 Badge: Super Veloz!</Badge>}
+                <div className="text-sm text-muted-foreground font-medium">+{xpGained} XP ganhos</div>
+                {score >= 10 && <Badge variant="secondary">🏆 Badge: Veloz!</Badge>}
+                {score >= 15 && <Badge>🚀 Badge: Super Veloz!</Badge>}
 
                 <div className="flex gap-3 justify-center pt-2 flex-wrap">
                   <Button onClick={startChallenge} size="lg" disabled={loadingQuestions}>
