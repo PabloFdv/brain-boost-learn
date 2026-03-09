@@ -189,7 +189,7 @@ export default function SimulatorPage() {
     const correctText = getCorrectAnswer(q);
     const progress = ((currentQ) / questions.length) * 100;
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <AnswerFeedback show={feedback.show} correct={feedback.correct} />
         <div className="container mx-auto p-4 md:p-6 max-w-xl">
