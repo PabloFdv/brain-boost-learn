@@ -352,7 +352,7 @@ export default function BattlePage() {
 
   if (playing && userKey) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <BattlePlay battle={playing} userKey={userKey} onFinish={handleBattleFinish} />
       </div>
