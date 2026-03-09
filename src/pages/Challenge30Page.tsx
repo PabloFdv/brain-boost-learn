@@ -307,7 +307,7 @@ export default function Challenge30Page() {
 
   // Start screen
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <Header />
       <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-6">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
