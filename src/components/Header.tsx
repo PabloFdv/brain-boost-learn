@@ -24,6 +24,7 @@ const Header = () => {
   ];
 
   const mobileExtraItems = [
+    { href: "/stats", icon: BarChart3, label: "Estatísticas" },
     { href: "/mental-lab", icon: Brain, label: "Lab Mental" },
     { href: "/school-map", icon: School, label: "Mapa Escola" },
     { href: "/error-lab", icon: FlaskConical, label: "Lab Erros" },
