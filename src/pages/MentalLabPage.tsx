@@ -92,7 +92,7 @@ export default function MentalLabPage() {
 
   if (mode && question) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 lg:pb-6">
         <Header />
         <div className="container mx-auto p-4 md:p-6 max-w-xl space-y-4">
           <div className="flex justify-between items-center">
